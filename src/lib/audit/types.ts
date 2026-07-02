@@ -80,9 +80,22 @@ export type AuditResult = {
   };
 };
 
+export type AuditApiResponse = {
+  auditId: string;
+  cached: boolean;
+  audit: AuditResult;
+};
+
+export type ReportApiResponse = {
+  cached: boolean;
+  report: AuditReport;
+};
+
 export type AuditReport = {
   title: string;
   executiveSummary: string;
+  humanReportMarkdown: string;
+  agentInstructionsMarkdown: string;
   topIssues: Array<{
     title: string;
     impact: string;

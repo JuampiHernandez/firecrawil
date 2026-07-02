@@ -8,8 +8,12 @@ import {
   ExternalLink,
   FileText,
   Flame,
+  Lock,
+  LogIn,
+  LogOut,
   Loader2,
   Radar,
+  RefreshCw,
   Sparkles,
   XCircle,
 } from "lucide-react";
@@ -23,7 +27,8 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { AuditCategory, AuditCheck, AuditReport, AuditResult, CheckStatus } from "@/lib/audit/types";
+import type { AuditApiResponse, AuditCategory, AuditCheck, AuditReport, AuditResult, CheckStatus, ReportApiResponse } from "@/lib/audit/types";
+import { createClient } from "@/lib/supabase/client";
 
 const examples = ["https://www.firecrawl.dev", "https://supabase.com", "https://vercel.com", "https://stripe.com"];
 
@@ -34,10 +39,27 @@ const scanSteps = [
   "Scoring agent and developer readiness",
 ];
 
-export function AuditApp() {
+type CurrentUser = {
+  email: string;
+  name?: string;
+};
+
+export function AuditApp({
+  user,
+  isPaid,
+  isSupabaseConfigured,
+}: {
+  user: CurrentUser | null;
+  isPaid: boolean;
+  isSupabaseConfigured: boolean;
+}) {
   const [url, setUrl] = useState("https://www.firecrawl.dev");
+  const [auditId, setAuditId] = useState<string | null>(null);
   const [audit, setAudit] = useState<AuditResult | null>(null);
   const [report, setReport] = useState<AuditReport | null>(null);
+  const [isCached, setIsCached] = useState(false);
+  const [isReportCached, setIsReportCached] = useState(false);
+  const [isLockedPreview, setIsLockedPreview] = useState(false);
   const [isAuditing, setIsAuditing] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +68,20 @@ export function AuditApp() {
     event?.preventDefault();
     setError(null);
     setReport(null);
+    setIsReportCached(false);
     setIsAuditing(true);
+
+    if (!user) {
+      setAudit(null);
+      setAuditId(null);
+      setIsCached(false);
+      setIsLockedPreview(false);
+      await new Promise((resolve) => setTimeout(resolve, 1600));
+      setAudit(buildLockedPreviewAudit(url));
+      setIsLockedPreview(true);
+      setIsAuditing(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/audit", {
@@ -54,11 +89,14 @@ export function AuditApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      const payload = await response.json();
+      const payload = (await response.json()) as AuditApiResponse & { error?: string };
       if (!response.ok) {
         throw new Error(payload.error ?? "Audit failed.");
       }
-      setAudit(payload);
+      setAudit(payload.audit);
+      setAuditId(payload.auditId);
+      setIsCached(payload.cached);
+      setIsLockedPreview(false);
     } catch (scanError) {
       setError(scanError instanceof Error ? scanError.message : "Audit failed.");
     } finally {
@@ -67,7 +105,7 @@ export function AuditApp() {
   }
 
   async function generateReport() {
-    if (!audit) return;
+    if (!auditId || isLockedPreview) return;
     setError(null);
     setIsReporting(true);
 
@@ -75,13 +113,14 @@ export function AuditApp() {
       const response = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audit }),
+        body: JSON.stringify({ auditId }),
       });
-      const payload = await response.json();
+      const payload = (await response.json()) as ReportApiResponse & { error?: string };
       if (!response.ok) {
         throw new Error(payload.error ?? "Report failed.");
       }
-      setReport(payload);
+      setReport(payload.report);
+      setIsReportCached(payload.cached);
     } catch (reportError) {
       setError(reportError instanceof Error ? reportError.message : "Report failed.");
     } finally {
@@ -89,17 +128,70 @@ export function AuditApp() {
     }
   }
 
+  async function rescan() {
+    if (!user || !isPaid) return;
+    setError(null);
+    setReport(null);
+    setIsReportCached(false);
+    setIsAuditing(true);
+
+    try {
+      const response = await fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, force: true }),
+      });
+      const payload = (await response.json()) as AuditApiResponse & { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Audit failed.");
+      }
+      setAudit(payload.audit);
+      setAuditId(payload.auditId);
+      setIsCached(payload.cached);
+      setIsLockedPreview(false);
+    } catch (scanError) {
+      setError(scanError instanceof Error ? scanError.message : "Audit failed.");
+    } finally {
+      setIsAuditing(false);
+    }
+  }
+
+  async function signInWithGoogle() {
+    if (!isSupabaseConfigured) {
+      setError("Supabase is not configured yet. Add the Supabase URL and publishable key once Supabase is back.");
+      return;
+    }
+
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (authError) {
+      setError(authError.message);
+    }
+  }
+
+  async function signOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.reload();
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.18),transparent_32rem),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.08),transparent_24rem)]" />
       <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-8 sm:px-8 lg:px-10">
-        <Header />
+        <Header user={user} isPaid={isPaid} onSignIn={signInWithGoogle} onSignOut={signOut} />
 
         <Card className="border-orange-500/20 bg-card/80 shadow-2xl shadow-orange-950/10 backdrop-blur">
           <CardContent className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1.1fr_0.9fr] lg:p-8">
             <div className="space-y-6">
               <Badge className="w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
-                Firecrawl-powered docs intelligence
+                {user ? "Cache-first docs intelligence" : "Preview without spending scan credits"}
               </Badge>
               <div className="max-w-3xl space-y-4">
                 <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
@@ -107,8 +199,18 @@ export function AuditApp() {
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
                   Scan a product website for docs quality, agent readability, SDK coverage, demos, trust assets,
-                  socials, and LLM discoverability. Generate a remediation report when you need the full diagnosis.
+                  socials, and LLM discoverability. Generate a human report plus an agent-ready remediation file when
+                  you need the full diagnosis.
                 </p>
+                {!user ? (
+                  <p className="max-w-2xl text-sm text-orange-200">
+                    Anonymous searches show a simulated loading state and locked preview only. Real cached results unlock after Google sign-in.
+                  </p>
+                ) : !isPaid ? (
+                  <p className="max-w-2xl text-sm text-orange-200">
+                    Signed-in users can load stored scans. Fresh Firecrawl scans are reserved for paid accounts.
+                  </p>
+                ) : null}
               </div>
 
               <form onSubmit={runScan} className="flex flex-col gap-3 sm:flex-row">
@@ -120,7 +222,7 @@ export function AuditApp() {
                 />
                 <Button type="submit" size="lg" disabled={isAuditing} className="h-12 bg-orange-500 text-black hover:bg-orange-400">
                   {isAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Radar className="mr-2 h-4 w-4" />}
-                  Audit site
+                  {user ? "Check cache" : "Preview result"}
                 </Button>
               </form>
 
@@ -150,13 +252,37 @@ export function AuditApp() {
         ) : null}
 
         {isAuditing ? <LoadingScorecard /> : null}
-        {audit ? <Results audit={audit} onGenerateReport={generateReport} isReporting={isReporting} report={report} /> : null}
+        {audit ? (
+          <Results
+            audit={audit}
+            onGenerateReport={generateReport}
+            onRescan={rescan}
+            isReporting={isReporting}
+            report={report}
+            isCached={isCached}
+            isReportCached={isReportCached}
+            isLockedPreview={isLockedPreview}
+            user={user}
+            isPaid={isPaid}
+            onSignIn={signInWithGoogle}
+          />
+        ) : null}
       </section>
     </main>
   );
 }
 
-function Header() {
+function Header({
+  user,
+  isPaid,
+  onSignIn,
+  onSignOut,
+}: {
+  user: CurrentUser | null;
+  isPaid: boolean;
+  onSignIn: () => void;
+  onSignOut: () => void;
+}) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -168,9 +294,23 @@ function Header() {
           <p className="text-xs text-muted-foreground">Human docs. Agent docs. LLM discovery.</p>
         </div>
       </div>
-      <Badge variant="outline" className="hidden border-orange-500/30 text-orange-200 sm:inline-flex">
-        MVP
-      </Badge>
+      {user ? (
+        <div className="flex items-center gap-3">
+          <div className="hidden text-right sm:block">
+            <p className="text-sm font-medium">{user.name ?? user.email}</p>
+            <p className="text-xs text-muted-foreground">{isPaid ? "Paid account" : "Free account"}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={onSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign out
+          </Button>
+        </div>
+      ) : (
+        <Button variant="outline" size="sm" onClick={onSignIn} className="border-orange-500/30 text-orange-200">
+          <LogIn className="mr-2 h-4 w-4" />
+          Sign in with Google
+        </Button>
+      )}
     </div>
   );
 }
@@ -239,23 +379,51 @@ function LoadingScorecard() {
 function Results({
   audit,
   onGenerateReport,
+  onRescan,
   isReporting,
   report,
+  isCached,
+  isReportCached,
+  isLockedPreview,
+  user,
+  isPaid,
+  onSignIn,
 }: {
   audit: AuditResult;
   onGenerateReport: () => void;
+  onRescan: () => void;
   isReporting: boolean;
   report: AuditReport | null;
+  isCached: boolean;
+  isReportCached: boolean;
+  isLockedPreview: boolean;
+  user: CurrentUser | null;
+  isPaid: boolean;
+  onSignIn: () => void;
 }) {
   const checks = useMemo(() => audit.categories.flatMap((category) => category.checks), [audit]);
   const failingChecks = checks.filter((check) => check.status !== "pass");
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {isLockedPreview ? <LockedPreviewOverlay onSignIn={onSignIn} /> : null}
       <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
         <Card className="bg-card/80">
           <CardHeader>
-            <CardTitle>Overall Score</CardTitle>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>Overall Score</CardTitle>
+              {isCached ? (
+                <Badge variant="outline" className="border-emerald-500/30 text-emerald-300">
+                  Cached
+                </Badge>
+              ) : isLockedPreview ? (
+                <Badge variant="outline" className="border-orange-500/30 text-orange-200">
+                  Locked preview
+                </Badge>
+              ) : (
+                <Badge variant="outline">Fresh scan</Badge>
+              )}
+            </div>
             <CardDescription>{audit.normalizedUrl}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6">
@@ -265,10 +433,20 @@ function Results({
               <MiniMetric label="Scanned" value={audit.stats.scannedPages} />
               <MiniMetric label="Issues" value={failingChecks.length} />
             </div>
-            <Button onClick={onGenerateReport} disabled={isReporting} className="w-full bg-orange-500 text-black hover:bg-orange-400">
+            <Button
+              onClick={onGenerateReport}
+              disabled={isReporting || isLockedPreview || !user}
+              className="w-full bg-orange-500 text-black hover:bg-orange-400"
+            >
               {isReporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-              Generate remediation report
+              Generate remediation package
             </Button>
+            {isPaid ? (
+              <Button variant="outline" onClick={onRescan} className="w-full">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Run paid rescan
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -296,7 +474,13 @@ function Results({
           <ChecksTable categories={audit.categories} />
         </TabsContent>
         <TabsContent value="report" className="mt-4">
-          <ReportPanel report={report} isReporting={isReporting} onGenerateReport={onGenerateReport} />
+          <ReportPanel
+            report={report}
+            isReporting={isReporting}
+            onGenerateReport={onGenerateReport}
+            isReportCached={isReportCached}
+            disabled={isLockedPreview || !user}
+          />
         </TabsContent>
       </Tabs>
     </div>
@@ -328,6 +512,30 @@ function ScoreRing({ score }: { score: number }) {
         <p className="font-mono text-4xl font-semibold">{score}</p>
         <p className="text-xs text-muted-foreground">/ 100</p>
       </div>
+    </div>
+  );
+}
+
+function LockedPreviewOverlay({ onSignIn }: { onSignIn: () => void }) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-start justify-center rounded-2xl bg-background/20 pt-24 backdrop-blur-sm">
+      <Card className="mx-4 max-w-md border-orange-500/30 bg-card/95 shadow-2xl">
+        <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10">
+            <Lock className="h-5 w-5 text-orange-300" />
+          </div>
+          <div>
+            <p className="font-medium">Sign in to unlock the stored scan</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This preview did not call Firecrawl. Google sign-in unlocks cached results, and paid users can trigger fresh scans.
+            </p>
+          </div>
+          <Button onClick={onSignIn} className="bg-orange-500 text-black hover:bg-orange-400">
+            <LogIn className="mr-2 h-4 w-4" />
+            Sign in with Google
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -369,7 +577,7 @@ function IssueList({ checks }: { checks: AuditCheck[] }) {
     <Card className="bg-card/80">
       <CardHeader>
         <CardTitle>Highest-Signal Gaps</CardTitle>
-        <CardDescription>The report generator expands these into a prioritized remediation plan.</CardDescription>
+        <CardDescription>The report generator expands these into human-readable and agent-executable fixes.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {checks.length ? (
@@ -468,10 +676,14 @@ function ReportPanel({
   report,
   isReporting,
   onGenerateReport,
+  isReportCached,
+  disabled,
 }: {
   report: AuditReport | null;
   isReporting: boolean;
   onGenerateReport: () => void;
+  isReportCached: boolean;
+  disabled: boolean;
 }) {
   if (isReporting) {
     return (
@@ -494,12 +706,12 @@ function ReportPanel({
           <div>
             <p className="font-medium">Generate the full remediation plan</p>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              The scorecard is fast and deterministic. The report turns the evidence into exact fixes, CTAs, and an
-              llms.txt draft.
+              The scorecard is fast and deterministic. The report package turns the evidence into a PDF-friendly human
+              report and a repo-ready agent remediation file.
             </p>
           </div>
-          <Button onClick={onGenerateReport} className="bg-orange-500 text-black hover:bg-orange-400">
-            Generate report <ArrowRight className="ml-2 h-4 w-4" />
+          <Button onClick={onGenerateReport} disabled={disabled} className="bg-orange-500 text-black hover:bg-orange-400">
+            Generate reports <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </CardContent>
       </Card>
@@ -509,16 +721,165 @@ function ReportPanel({
   return (
     <Card className="bg-card/80">
       <CardHeader>
-        <CardTitle>{report.title}</CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle>{report.title}</CardTitle>
+          {isReportCached ? (
+            <Badge variant="outline" className="border-emerald-500/30 text-emerald-300">
+              Cached report
+            </Badge>
+          ) : null}
+        </div>
         <CardDescription>{report.executiveSummary}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[520px] rounded-xl border border-border bg-black/30 p-4">
-          <pre className="whitespace-pre-wrap font-mono text-xs leading-6 text-zinc-200">{report.rawMarkdown}</pre>
-        </ScrollArea>
+        <Tabs defaultValue="human" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="human">Human / PDF</TabsTrigger>
+            <TabsTrigger value="agent">Agent File</TabsTrigger>
+            <TabsTrigger value="combined">Combined</TabsTrigger>
+          </TabsList>
+          <TabsContent value="human" className="mt-4">
+            <ReportMarkdown title="Human remediation report" markdown={report.humanReportMarkdown} />
+          </TabsContent>
+          <TabsContent value="agent" className="mt-4">
+            <ReportMarkdown title="Agent remediation instructions" markdown={report.agentInstructionsMarkdown} />
+          </TabsContent>
+          <TabsContent value="combined" className="mt-4">
+            <ReportMarkdown title="Full remediation package" markdown={report.rawMarkdown} />
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
+}
+
+function ReportMarkdown({ title, markdown }: { title: string; markdown: string }) {
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-medium">{title}</p>
+        <Badge variant="outline" className="border-orange-500/30 text-orange-200">
+          Markdown
+        </Badge>
+      </div>
+      <ScrollArea className="h-[520px] rounded-xl border border-border bg-black/30 p-4">
+        <pre className="whitespace-pre-wrap font-mono text-xs leading-6 text-zinc-200">{markdown}</pre>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function buildLockedPreviewAudit(inputUrl: string): AuditResult {
+  const normalizedUrl = normalizePreviewUrl(inputUrl);
+  const checks = [
+    {
+      id: "locked-agent-entrypoint",
+      label: "Agent entrypoint analysis",
+      description: "Sign in to unlock the real cached score and evidence.",
+      status: "warn" as const,
+      weight: 16,
+      evidence: "Locked preview",
+      fix: "Unlock the stored audit with Google sign-in.",
+    },
+    {
+      id: "locked-onboarding",
+      label: "Developer onboarding analysis",
+      description: "The real scan checks quickstarts, auth docs, response examples, and error handling.",
+      status: "warn" as const,
+      weight: 16,
+      evidence: "Locked preview",
+      fix: "Unlock to view page-level evidence.",
+    },
+  ];
+
+  const categories: AuditCategory[] = [
+    {
+      id: "agentReadiness",
+      title: "Agent Readiness",
+      description: "Can an AI agent crawl, understand, and use the docs?",
+      score: 64,
+      checks,
+    },
+    {
+      id: "developerOnboarding",
+      title: "Developer Onboarding",
+      description: "Can a developer reach a working first request quickly?",
+      score: 58,
+      checks,
+    },
+    {
+      id: "apiSdkCoverage",
+      title: "API & SDK Coverage",
+      description: "Are endpoints, SDKs, examples, and lifecycle details complete?",
+      score: 61,
+      checks,
+    },
+    {
+      id: "contentDemos",
+      title: "Content & Demos",
+      description: "Are there tutorials, videos, cookbooks, and examples that teach?",
+      score: 52,
+      checks,
+    },
+    {
+      id: "trustCommunity",
+      title: "Trust & Community",
+      description: "Can developers verify reliability, support, and community health?",
+      score: 67,
+      checks,
+    },
+    {
+      id: "llmDiscoverability",
+      title: "LLM Discoverability",
+      description: "Is the platform surfaced clearly to search engines and LLMs?",
+      score: 49,
+      checks,
+    },
+  ];
+
+  return {
+    url: inputUrl,
+    normalizedUrl,
+    scannedAt: new Date().toISOString(),
+    overallScore: 58,
+    summary: {
+      strengths: ["Cached scan may exist", "Google sign-in unlocks real evidence"],
+      risks: ["Anonymous previews are intentionally blurred"],
+      criticalMissing: ["Sign in to view real findings"],
+    },
+    categories,
+    pages: [
+      {
+        url: normalizedUrl,
+        title: "Locked page evidence",
+        markdown: "Sign in to unlock the stored scan data.",
+        links: [],
+      },
+    ],
+    assets: [
+      {
+        type: "docs",
+        label: "Locked docs evidence",
+        url: normalizedUrl,
+      },
+    ],
+    stats: {
+      discoveredUrls: 24,
+      scannedPages: 8,
+      externalLinks: 12,
+      codeBlocks: 6,
+      estimatedTokensSaved: 18000,
+    },
+  };
+}
+
+function normalizePreviewUrl(inputUrl: string) {
+  try {
+    const withProtocol = inputUrl.startsWith("http") ? inputUrl : `https://${inputUrl}`;
+    return new URL(withProtocol).origin;
+  } catch {
+    return "https://example.com";
+  }
 }
 
 function StatusIcon({ status }: { status: CheckStatus }) {

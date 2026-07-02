@@ -11,7 +11,7 @@ Enter a product or docs URL and the app returns a minimalist scorecard for:
 - Trust and community signals
 - LLM discoverability
 
-The scorecard is intentionally deterministic and evidence-based. The **Generate remediation report** button turns the audit into a deeper plan with concrete fixes, CTAs, and a draft `llms.txt`.
+The scorecard is intentionally deterministic and evidence-based. The **Generate remediation package** button turns the audit into two outputs: a PDF-friendly human report and a repo-ready agent remediation file with concrete fixes, acceptance criteria, and a draft `llms.txt`.
 
 ## Setup
 
@@ -24,15 +24,40 @@ Add:
 
 ```bash
 FIRECRAWL_API_KEY=fc-your-key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
 ```
 
 Optional:
 
 ```bash
 AI_GATEWAY_API_KEY=your-ai-gateway-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 If no AI key is configured, report generation uses a deterministic fallback report.
+
+## Supabase Setup
+
+Apply `supabase/migrations/0001_init.sql` to create:
+
+- `profiles` for Google-auth users and the `is_paid` flag.
+- `audits` for complete cached scan JSON, including scanned pages, metadata, assets, checks, and scores.
+- `reports` for cached remediation packages linked to audits.
+
+In Supabase Auth, enable Google and add this redirect URL:
+
+```bash
+http://localhost:3000/auth/callback
+```
+
+After the database is available, seed the default example scans once:
+
+```bash
+npm run seed:audits
+```
+
+Only paid users (`profiles.is_paid = true`) can trigger fresh Firecrawl scans or rescans. Anonymous users see a simulated loading state and locked preview without spending Firecrawl credits.
 
 ## Run
 
@@ -65,7 +90,7 @@ npm run build
 - Add saved audits and benchmark comparisons.
 - Add Firecrawl `/agent` discovery for off-site official assets.
 - Add Firecrawl `/monitor` for recurring docs quality checks.
-- Add PDF export for reports.
+- Add one-click PDF export for the human report.
 - Add authenticated workspaces for teams.
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
