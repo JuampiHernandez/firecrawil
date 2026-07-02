@@ -32,8 +32,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AuditApiResponse, AuditCategory, AuditCheck, AuditReport, AuditResult, CheckStatus, ReportApiResponse } from "@/lib/audit/types";
 import { createClient } from "@/lib/supabase/client";
 
-const examples = ["https://www.firecrawl.dev", "https://supabase.com", "https://vercel.com", "https://stripe.com"];
-
 const scanSteps = [
   "Mapping public URLs",
   "Scraping docs and product pages",
@@ -196,7 +194,7 @@ export function AuditApp({
           <CardContent className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1.1fr_0.9fr] lg:p-8">
             <div className="space-y-6">
               <Badge className="w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
-                {user ? "Cache-first docs intelligence" : "Preview without spending scan credits"}
+                {user ? "Agent-ready docs intelligence" : "Preview without spending scan credits"}
               </Badge>
               <div className="max-w-3xl space-y-4">
                 <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
@@ -209,7 +207,7 @@ export function AuditApp({
                 </p>
                 {!user ? (
                   <p className="max-w-2xl text-sm text-orange-200">
-                    Anonymous searches show a simulated loading state and locked preview only. Real cached results unlock after Google sign-in.
+                    Anonymous searches show a simulated loading state and locked preview only. Real results unlock after Google sign-in.
                   </p>
                 ) : !isPaid ? (
                   <p className="max-w-2xl text-sm text-orange-200">
@@ -227,21 +225,9 @@ export function AuditApp({
                 />
                 <Button type="submit" size="lg" disabled={isAuditing} className="h-12 bg-orange-500 text-black hover:bg-orange-400">
                   {isAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Radar className="mr-2 h-4 w-4" />}
-                  {user ? "Check cache" : "Preview result"}
+                  {user ? "Scan" : "Preview result"}
                 </Button>
               </form>
-
-              <div className="flex flex-wrap gap-2">
-                {examples.map((example) => (
-                  <button
-                    key={example}
-                    onClick={() => setUrl(example)}
-                    className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground transition hover:border-orange-500/50 hover:text-foreground"
-                  >
-                    {example.replace("https://", "")}
-                  </button>
-                ))}
-              </div>
             </div>
 
             <ScanPanel audit={audit} isAuditing={isAuditing} />
@@ -419,7 +405,7 @@ function Results({
               <CardTitle>Overall Score</CardTitle>
               {isCached ? (
                 <Badge variant="outline" className="border-emerald-500/30 text-emerald-300">
-                  Cached
+                  Stored scan
                 </Badge>
               ) : isLockedPreview ? (
                 <Badge variant="outline" className="border-orange-500/30 text-orange-200">
@@ -532,7 +518,7 @@ function LockedPreviewOverlay({ onSignIn }: { onSignIn: () => void }) {
           <div>
             <p className="font-medium">Sign in to unlock the stored scan</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              This preview did not call Firecrawl. Google sign-in unlocks cached results, and paid users can trigger fresh scans.
+              This preview did not call Firecrawl. Google sign-in unlocks stored results, and paid users can trigger fresh scans.
             </p>
           </div>
           <Button onClick={onSignIn} className="bg-orange-500 text-black hover:bg-orange-400">
@@ -730,7 +716,7 @@ function ReportPanel({
           <CardTitle>{report.title}</CardTitle>
           {isReportCached ? (
             <Badge variant="outline" className="border-emerald-500/30 text-emerald-300">
-              Cached report
+              Stored report
             </Badge>
           ) : null}
         </div>
@@ -1037,7 +1023,7 @@ function buildLockedPreviewAudit(inputUrl: string): AuditResult {
     {
       id: "locked-agent-entrypoint",
       label: "Agent entrypoint analysis",
-      description: "Sign in to unlock the real cached score and evidence.",
+      description: "Sign in to unlock the real score and evidence.",
       status: "warn" as const,
       weight: 16,
       evidence: "Locked preview",
@@ -1105,7 +1091,7 @@ function buildLockedPreviewAudit(inputUrl: string): AuditResult {
     scannedAt: new Date().toISOString(),
     overallScore: 58,
     summary: {
-      strengths: ["Cached scan may exist", "Google sign-in unlocks real evidence"],
+      strengths: ["A stored scan may exist", "Google sign-in unlocks real evidence"],
       risks: ["Anonymous previews are intentionally blurred"],
       criticalMissing: ["Sign in to view real findings"],
     },

@@ -118,7 +118,51 @@ async function saveReport(
   return data.report as AuditReport;
 }
 
+type ReportTier = "polish" | "improve" | "overhaul";
+
+function getReportTier(score: number): ReportTier {
+  if (score >= 85) return "polish";
+  if (score >= 60) return "improve";
+  return "overhaul";
+}
+
+const HUMAN_REPORT_BRIEFS: Record<ReportTier, string> = {
+  polish: `This site scored high. It is already close to best-in-class, so the report must be SHORT — around 300-450 words. Do not manufacture problems to fill space.
+
+Sections:
+1. **Verdict** — 2-3 sentences: these docs are strong and how they compare to best-in-class developer docs.
+2. **What stands out** — 3-5 bullets on what they do genuinely well.
+3. **Worth polishing** — only the real remaining gaps (usually 2-4 items). For each: what it is and why it's worth doing, in 1-2 sentences.
+4. **Bottom line** — one short paragraph.
+
+No roadmap. No timelines. No "highest-priority fixes" framing for minor polish items.`,
+  improve: `This site is decent but has real gaps. Target 500-800 words.
+
+Sections:
+1. **Verdict** — 2-3 sentences: where this site stands relative to best-in-class developer docs, and the one thing holding it back the most.
+2. **What's working** — short bullets.
+3. **What to fix** — the top issues (5 max), ordered by impact. For each: what's missing, why a developer or AI agent hits a wall because of it, and the concrete fix. Include a small tailored example (a cURL snippet, a nav label, a quickstart outline) only where it genuinely clarifies the fix.
+4. **Start here this week** — 2-3 quick wins.
+5. **Bottom line** — one short paragraph.`,
+  overhaul: `This site has significant gaps. Target 800-1200 words, but stay readable — depth comes from specificity, not length.
+
+Sections:
+1. **Verdict** — honest but constructive: how far this is from best-in-class developer docs and what that costs them in adoption.
+2. **What's working** — even weak sites do something right; find it.
+3. **What to fix** — the issues that matter, ordered by impact. For each: what's missing, the real-world consequence, and the concrete fix with a tailored example where useful.
+4. **Suggested order of work** — a simple two-phase plan: "first two weeks" and "after that". No 7/30/90-day corporate roadmap.
+5. **Bottom line** — one short paragraph.`,
+};
+
+const AGENT_BRIEFS: Record<ReportTier, string> = {
+  polish: `The site scored high, so this file should be SHORT and cover ONLY the specific remaining gaps listed in the failing checks. Do not scaffold pages or assets the site already has. Skip any section that has nothing real in it.`,
+  improve: `Cover only the failing and warning checks. Do not tell the agent to create assets the site already has (check the detected assets list).`,
+  overhaul: `Cover the failing and warning checks thoroughly. Do not tell the agent to create assets the site already has (check the detected assets list).`,
+};
+
 function buildReportPrompt(audit: AuditResult) {
+  const tier = getReportTier(audit.overallScore);
+
   const failingChecks = audit.categories.flatMap((category) =>
     category.checks
       .filter((check) => check.status !== "pass")
@@ -137,9 +181,9 @@ function buildReportPrompt(audit: AuditResult) {
     excerpt: page.markdown?.slice(0, 900),
   }));
 
-  return `You are a senior developer relations and technical documentation strategist.
+  return `You are an experienced developer-docs consultant writing for a busy docs owner, founder, or DevRel lead. You produce reports people actually read, not compliance documents.
 
-Create TWO separate remediation artifacts for this developer platform audit.
+Create TWO artifacts for this developer platform audit.
 
 Site: ${audit.normalizedUrl}
 Overall score: ${audit.overallScore}/100
@@ -154,27 +198,25 @@ ${JSON.stringify(audit.assets.slice(0, 40), null, 2)}
 Scanned page samples:
 ${JSON.stringify(scannedPageSummaries, null, 2)}
 
+## Benchmark calibration
+
+Judge this site against the bar set by the strongest developer docs in the industry — the standard of docs like Vercel's, Supabase's, and Firecrawl's: a copy-paste first request within one click of the docs home, complete auth and error documentation, a published OpenAPI spec, llms.txt for agents, runnable examples, and a visible changelog. Use that bar to calibrate how severe each gap really is.
+
+STRICT RULE: never name those companies — or any other company — in your output. Say "best-in-class developer docs" or "the strongest API docs in the industry" instead.
+
+## Voice
+
+- Write like a sharp consultant talking to a peer. Plain language, short paragraphs.
+- Every sentence must carry a judgment or an action. No filler, no corporate framing, no legalese.
+- Severity must be proportional. A missing llms.txt on otherwise excellent docs is "worth adding", not a "critical adoption risk".
+- Do not pad. If there is little to say, say little.
+
 Return exactly this format, with no prose outside the tags:
 
 <human-report>
-# Remediation Report: ${audit.normalizedUrl}
+# Docs Report: ${audit.normalizedUrl}
 
-Write a polished, PDF-export-friendly Markdown report for a human docs owner, founder, PM, or developer relations lead.
-
-Required sections:
-1. Executive summary
-2. What is working
-3. What is failing and why it matters
-4. Highest-priority fixes
-5. Practical examples tailored to the audited business
-6. 7-day, 30-day, and 90-day roadmap
-7. Final assessment
-
-Style rules:
-- Explain business impact, adoption risk, and developer journey gaps.
-- Keep it readable for humans, not just a task list.
-- Include concrete examples when possible, such as a quickstart outline, example cURL, response JSON, error JSON, or navigation labels.
-- Be direct, picky, and specific. Do not be fluffy.
+${HUMAN_REPORT_BRIEFS[tier]}
 </human-report>
 
 <agent-instructions>
@@ -182,29 +224,29 @@ Style rules:
 
 Write a repo-ready Markdown instruction file that a coding agent can paste into a docs repository and execute.
 
-Required sections:
+${AGENT_BRIEFS[tier]}
+
+Use these sections, skipping any that would be empty:
 1. Goal
 2. Files to create
 3. Files to edit
 4. Navigation changes
-5. Page templates
-6. Required examples
-7. Acceptance criteria
-8. Constraints and do-not-do rules
-9. Suggested llms.txt
+5. Required examples
+6. Acceptance criteria
+7. Constraints and do-not-do rules
+8. Suggested llms.txt (only if the site is missing one or theirs is weak)
 
 Style rules:
 - Prefer exact file paths and route paths such as docs/quickstart.md, docs/reliability.md, public/llms.txt, public/openapi.json.
 - Use checklists and acceptance criteria.
-- Remove executive storytelling.
 - Make instructions deterministic enough for another AI agent to implement.
-- Include a complete first-pass llms.txt draft.
 </agent-instructions>
 
 Do not merge the two audiences.`;
 }
 
 function buildFallbackReport(audit: AuditResult): AuditReport {
+  const tier = getReportTier(audit.overallScore);
   const nonPassing = audit.categories.flatMap((category) =>
     category.checks
       .filter((check) => check.status !== "pass")
@@ -260,57 +302,66 @@ function buildFallbackReport(audit: AuditResult): AuditReport {
     "- Prefer examples repos for implementation patterns.",
   ].join("\n");
 
+  const verdictByTier: Record<ReportTier, string> = {
+    polish: `${audit.normalizedUrl} scored ${audit.overallScore}/100. These docs are already strong — close to the bar set by best-in-class developer docs. What follows is polish, not repair.`,
+    improve: `${audit.normalizedUrl} scored ${audit.overallScore}/100. The foundation is solid, but a few gaps make the first-use experience harder than it should be for developers and AI agents.`,
+    overhaul: `${audit.normalizedUrl} scored ${audit.overallScore}/100. Right now a new developer or AI agent cannot reliably answer the basics: what the API does, how to make a first request, what responses and errors look like, and where the canonical schema lives.`,
+  };
+
+  const issueLimit = tier === "polish" ? 4 : tier === "improve" ? 5 : 8;
+
   const humanReportMarkdown = [
-    `# Remediation Report: ${audit.normalizedUrl}`,
+    `# Docs Report: ${audit.normalizedUrl}`,
     "",
-    `## Executive Summary`,
-    `${audit.normalizedUrl} scored ${audit.overallScore}/100. The audit found useful surface area, but the docs need a clearer first-success journey for developers and stronger machine-readable entrypoints for agents.`,
+    "## Verdict",
+    verdictByTier[tier],
     "",
-    "The main issue is not just missing pages. It is that a new developer or AI agent cannot reliably answer what the API does, how to make the first request, what a valid response looks like, how failures behave, and where the canonical schema lives.",
-    "",
-    "## What Is Working",
+    tier === "polish" ? "## What Stands Out" : "## What's Working",
     ...audit.summary.strengths.map((strength) => `- ${strength}`),
     "",
-    "## What Is Failing And Why It Matters",
-    ...nonPassing.slice(0, 8).map(
+    tier === "polish" ? "## Worth Polishing" : "## What To Fix",
+    ...nonPassing.slice(0, issueLimit).map(
       ({ category, check }) =>
-        `- **${category}: ${check.label}** - ${check.description} ${check.fix ? `Fix: ${check.fix}` : ""}`,
+        `- **${category}: ${check.label}** — ${check.description}${check.fix ? ` Fix: ${check.fix}` : ""}`,
     ),
+    ...(tier === "polish"
+      ? []
+      : [
+          "",
+          "## Start Here This Week",
+          ...topIssues.slice(0, 3).map((issue) => `- ${issue.cta}`),
+        ]),
     "",
-    "## Top Priority Fixes",
-    ...topIssues.map(
-      (issue, index) =>
-        `### ${index + 1}. ${issue.title}\n\n**Impact:** ${issue.impact}\n\n**Concrete fix:** ${issue.fix}\n\n**CTA:** ${issue.cta}`,
-    ),
-    "",
-    "## Practical Example: Quickstart Pattern",
-    "```md",
-    "# Quickstart",
-    "",
-    "## 1. Get an API key",
-    "## 2. Make your first request",
-    "## 3. Understand the response",
-    "## 4. Common errors",
-    "## 5. Next steps",
-    "```",
-    "",
-    "## Roadmap",
-    "### 7 Days",
-    ...topIssues.slice(0, 3).map((issue) => `- ${issue.cta}`),
-    "",
-    "### 30 Days",
-    ...suggestedAssets.slice(0, 5).map((asset) => `- ${asset}`),
-    "",
-    "### 90 Days",
-    "- Build a complete onboarding system around quickstart, authentication, concepts, tutorials, and troubleshooting.",
-    "- Add agent-focused docs, machine-readable schemas, examples, and use-case guides.",
-    "- Establish a docs release process so every API change updates the docs and changelog.",
-    "",
-    "## Final Assessment",
-    "Fix the developer journey basics before adding more fragmented content. Quickstart, OpenAPI, examples, reliability docs, llms.txt, changelog, and GitHub examples should move the score materially within one quarter.",
+    "## Bottom Line",
+    tier === "polish"
+      ? "These docs already do the hard parts well. The items above are small additions that close the last gaps for developers and AI agents — none of them are urgent, all of them are cheap."
+      : tier === "improve"
+        ? "The gaps here are fixable in weeks, not months. Close the first-use gaps above before adding new content, and both developers and AI agents will get further, faster."
+        : "Fix the developer journey basics before adding more content. A quickstart with a copy-paste first request, a published schema, and honest error docs will move the score more than anything else.",
   ].join("\n");
 
-  const agentInstructionsMarkdown = [
+  const agentInstructionsMarkdown = tier === "polish"
+    ? [
+        `# Agent Docs Remediation Instructions: ${audit.normalizedUrl}`,
+        "",
+        "## Goal",
+        "The docs are already strong. Close only the specific remaining gaps below — do not restructure or recreate existing content.",
+        "",
+        "## Remaining Gaps",
+        ...nonPassing.map(
+          ({ category, check }) =>
+            `- [ ] **${category}: ${check.label}** — ${check.fix ?? check.description}`,
+        ),
+        "",
+        "## Constraints And Do-Not-Do Rules",
+        "- Do not create pages or assets the site already has.",
+        "- Do not change existing navigation or route paths.",
+        "- Keep new content consistent with the site's existing style and structure.",
+        ...(nonPassing.some(({ check }) => check.id.toLowerCase().includes("llms"))
+          ? ["", "## Suggested llms.txt", "```txt", llmsTxtDraft, "```"]
+          : []),
+      ].join("\n")
+    : [
     `# Agent Docs Remediation Instructions: ${audit.normalizedUrl}`,
     "",
     "## Goal",
@@ -380,28 +431,28 @@ function buildFallbackReport(audit: AuditResult): AuditReport {
 
   return {
     title: "Docs Remediation Reports",
-    executiveSummary: `${audit.normalizedUrl} scored ${audit.overallScore}/100. The generated output now includes a human remediation report and an agent-ready implementation file.`,
+    executiveSummary: verdictByTier[tier],
     humanReportMarkdown,
     agentInstructionsMarkdown,
     topIssues,
-    roadmap: [
-      {
-        timeframe: "7 days",
-        actions: topIssues.slice(0, 3).map((issue) => issue.cta),
-      },
-      {
-        timeframe: "30 days",
-        actions: suggestedAssets.slice(0, 5),
-      },
-      {
-        timeframe: "90 days",
-        actions: [
-          "Add benchmark-quality cookbooks for the most common use cases.",
-          "Instrument docs feedback and re-audit weekly.",
-          "Create video walkthroughs for every core integration path.",
-        ],
-      },
-    ],
+    roadmap:
+      tier === "polish"
+        ? [
+            {
+              timeframe: "Whenever convenient",
+              actions: topIssues.map((issue) => issue.cta),
+            },
+          ]
+        : [
+            {
+              timeframe: "First two weeks",
+              actions: topIssues.slice(0, 3).map((issue) => issue.cta),
+            },
+            {
+              timeframe: "After that",
+              actions: suggestedAssets.slice(0, 5),
+            },
+          ],
     suggestedAssets,
     llmsTxtDraft,
     rawMarkdown,
