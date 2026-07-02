@@ -220,7 +220,7 @@ ${HUMAN_REPORT_BRIEFS[tier]}
 </human-report>
 
 <agent-instructions>
-# Agent Docs Remediation Instructions: ${audit.normalizedUrl}
+# DocScanner Remediation Instructions: ${audit.normalizedUrl}
 
 Write a repo-ready Markdown instruction file that a coding agent can paste into a docs repository and execute.
 
@@ -342,7 +342,7 @@ function buildFallbackReport(audit: AuditResult): AuditReport {
 
   const agentInstructionsMarkdown = tier === "polish"
     ? [
-        `# Agent Docs Remediation Instructions: ${audit.normalizedUrl}`,
+        `# DocScanner Remediation Instructions: ${audit.normalizedUrl}`,
         "",
         "## Goal",
         "The docs are already strong. Close only the specific remaining gaps below — do not restructure or recreate existing content.",
@@ -362,7 +362,7 @@ function buildFallbackReport(audit: AuditResult): AuditReport {
           : []),
       ].join("\n")
     : [
-    `# Agent Docs Remediation Instructions: ${audit.normalizedUrl}`,
+    `# DocScanner Remediation Instructions: ${audit.normalizedUrl}`,
     "",
     "## Goal",
     "Improve developer onboarding, API discoverability, and LLM readiness for the audited docs site.",

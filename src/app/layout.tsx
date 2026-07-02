@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AgentDocs Auditor",
-  description: "A Firecrawl-powered Lighthouse for agent-ready developer platforms.",
+  title: "DocScanner",
+  description: "Scan, score, and improve agent-ready developer documentation.",
 };
 
 export default function RootLayout({
