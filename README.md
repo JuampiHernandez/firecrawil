@@ -1,6 +1,6 @@
-# AgentDocs Auditor
+# DocScanner
 
-A Firecrawl-powered Lighthouse for developer platforms.
+A Firecrawl-powered lighthouse for agent-ready developer docs.
 
 Enter a product or docs URL and the app returns a minimalist scorecard for:
 

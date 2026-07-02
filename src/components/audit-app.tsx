@@ -4,22 +4,31 @@ import {
   Activity,
   AlertTriangle,
   ArrowRight,
+  Bot,
   CheckCircle2,
+  ChevronDown,
+  Code2,
   Copy,
   Download,
   ExternalLink,
   FileText,
-  Flame,
+  Gauge,
+  Globe2,
+  History,
   Lock,
   LogIn,
   LogOut,
   Loader2,
   Radar,
   RefreshCw,
+  Search,
+  ShieldCheck,
   Sparkles,
+  Target,
+  User,
   XCircle,
 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,11 +41,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AuditApiResponse, AuditCategory, AuditCheck, AuditReport, AuditResult, CheckStatus, ReportApiResponse } from "@/lib/audit/types";
 import { createClient } from "@/lib/supabase/client";
 
-const scanSteps = [
-  "Mapping public URLs",
-  "Scraping docs and product pages",
-  "Finding demos, socials, SDKs, trust pages",
-  "Scoring agent and developer readiness",
+const scanOutputs = [
+  { title: "Ranked issues", detail: "Severity, impact, and evidence" },
+  { title: "Readiness score", detail: "Agent, API, LLM, and trust signals" },
+  { title: "Source-backed proof", detail: "Exact pages, assets, and gaps" },
+  { title: "Fix plan", detail: "Repo-ready remediation tasks" },
 ];
 
 type CurrentUser = {
@@ -44,14 +53,30 @@ type CurrentUser = {
   name?: string;
 };
 
+type PastScan = {
+  id: string;
+  url: string;
+  score: number;
+  scannedAt: string;
+};
+
+type AccountCredits = {
+  used: number;
+  limit: number;
+};
+
 export function AuditApp({
   user,
   isPaid,
   isSupabaseConfigured,
+  pastScans,
+  credits,
 }: {
   user: CurrentUser | null;
   isPaid: boolean;
   isSupabaseConfigured: boolean;
+  pastScans: PastScan[];
+  credits: AccountCredits;
 }) {
   const [url, setUrl] = useState("https://www.firecrawl.dev");
   const [auditId, setAuditId] = useState<string | null>(null);
@@ -166,7 +191,7 @@ export function AuditApp({
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/app`,
         queryParams: {
           prompt: "select_account",
         },
@@ -184,165 +209,328 @@ export function AuditApp({
     window.location.reload();
   }
 
+  async function loadPastScan(scanUrl: string) {
+    setUrl(scanUrl);
+    await runScan();
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.18),transparent_32rem),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.08),transparent_24rem)]" />
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-8 sm:px-8 lg:px-10">
-        <Header user={user} isPaid={isPaid} onSignIn={signInWithGoogle} onSignOut={signOut} />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_2%,rgba(255,106,0,0.2),transparent_28rem),radial-gradient(circle_at_86%_10%,rgba(255,176,32,0.14),transparent_24rem),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_18rem)]" />
+      <div className="pointer-events-none fixed right-8 top-6 hidden h-72 w-72 rounded-full border border-white/5 bg-[radial-gradient(circle,rgba(255,106,0,0.38)_0_3%,transparent_4%),repeating-radial-gradient(circle,rgba(255,255,255,0.12)_0_1px,transparent_1px_48px)] lg:block" />
+      <div className="relative mx-auto flex w-full max-w-[1500px] flex-col gap-5 px-4 py-4 sm:px-6 lg:min-h-screen lg:flex-row lg:p-5">
+        <Sidebar
+          user={user}
+          isPaid={isPaid}
+          pastScans={pastScans}
+          credits={credits}
+          onSignIn={signInWithGoogle}
+          onSignOut={signOut}
+          onSelectPastScan={loadPastScan}
+        />
 
-        <Card className="border-orange-500/20 bg-card/80 shadow-2xl shadow-orange-950/10 backdrop-blur">
-          <CardContent className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[1.1fr_0.9fr] lg:p-8">
-            <div className="space-y-6">
-              <Badge className="w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
-                {user ? "Agent-ready docs intelligence" : "Preview without spending scan credits"}
-              </Badge>
-              <div className="max-w-3xl space-y-4">
-                <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-                  Lighthouse for agent-ready developer platforms.
-                </h1>
-                <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-                  Scan a product website for docs quality, agent readability, SDK coverage, demos, trust assets,
-                  socials, and LLM discoverability. Generate a human report plus an agent-ready remediation file when
-                  you need the full diagnosis.
-                </p>
-                {!user ? (
-                  <p className="max-w-2xl text-sm text-orange-200">
-                    Anonymous searches show a simulated loading state and locked preview only. Real results unlock after Google sign-in.
+        <section className="flex min-w-0 flex-1 flex-col gap-5">
+          <Card className="border-white/10 bg-[#111317]/85 shadow-2xl shadow-black/30 backdrop-blur">
+            <CardContent className="grid gap-6 p-5 sm:p-6 xl:grid-cols-[0.9fr_1.1fr] xl:p-7">
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
+                    {user ? "Agent-ready docs intelligence" : "Preview without scan credits"}
+                  </Badge>
+                  <Badge variant="outline" className="border-white/10 bg-white/[0.03] text-muted-foreground">
+                    Scan. Score. Improve.
+                  </Badge>
+                </div>
+                <div className="max-w-3xl space-y-4">
+                  <h1 className="text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
+                    The Lighthouse for <span className="text-orange-400">Developer Docs.</span>
+                  </h1>
+                  <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+                    Find missing specs, stale examples, and agent blockers before users hit them.
                   </p>
-                ) : !isPaid ? (
-                  <p className="max-w-2xl text-sm text-orange-200">
-                    Signed-in users can load stored scans. Fresh Firecrawl scans are reserved for paid accounts.
-                  </p>
-                ) : null}
+                  {!user ? (
+                    <p className="max-w-2xl text-sm text-orange-200">
+                      Anonymous searches show a simulated loading state and locked preview only. Real results unlock after Google sign-in.
+                    </p>
+                  ) : !isPaid ? (
+                    <p className="max-w-2xl text-sm text-orange-200">
+                      Signed-in users can load stored scans. Fresh Firecrawl scans are reserved for paid accounts.
+                    </p>
+                  ) : null}
+                </div>
+
+                <form onSubmit={runScan} className="rounded-2xl border border-white/10 bg-black/25 p-2 shadow-inner shadow-black/30">
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <div className="relative flex-1">
+                      <Globe2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={url}
+                        onChange={(event) => setUrl(event.target.value)}
+                        placeholder="https://docs.example.com"
+                        className="h-12 border-white/10 bg-[#0b0c0e]/80 pl-9 font-mono text-sm"
+                      />
+                    </div>
+                    <Button type="submit" size="lg" disabled={isAuditing} className="h-12 bg-orange-500 px-5 text-black hover:bg-orange-400">
+                      {isAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Radar className="mr-2 h-4 w-4" />}
+                      {user ? "Run scan" : "Preview score"}
+                    </Button>
+                  </div>
+                </form>
               </div>
 
-              <form onSubmit={runScan} className="flex flex-col gap-3 sm:flex-row">
-                <Input
-                  value={url}
-                  onChange={(event) => setUrl(event.target.value)}
-                  placeholder="https://docs.example.com"
-                  className="h-12 border-white/10 bg-background/70 font-mono text-sm"
-                />
-                <Button type="submit" size="lg" disabled={isAuditing} className="h-12 bg-orange-500 text-black hover:bg-orange-400">
-                  {isAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Radar className="mr-2 h-4 w-4" />}
-                  {user ? "Scan" : "Preview result"}
-                </Button>
-              </form>
-            </div>
+              <ScanPanel audit={audit} isAuditing={isAuditing} />
+            </CardContent>
+          </Card>
 
-            <ScanPanel audit={audit} isAuditing={isAuditing} />
-          </CardContent>
-        </Card>
+          {error ? (
+            <Alert className="border-red-500/30 bg-red-500/10">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Scan issue</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
 
-        {error ? (
-          <Alert className="border-red-500/30 bg-red-500/10">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Scan issue</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-
-        {isAuditing ? <LoadingScorecard /> : null}
-        {audit ? (
-          <Results
-            audit={audit}
-            onGenerateReport={generateReport}
-            onRescan={rescan}
-            isReporting={isReporting}
-            report={report}
-            isCached={isCached}
-            isReportCached={isReportCached}
-            isLockedPreview={isLockedPreview}
-            user={user}
-            isPaid={isPaid}
-            onSignIn={signInWithGoogle}
-          />
-        ) : null}
-      </section>
+          {isAuditing ? <LoadingScorecard /> : null}
+          {audit ? (
+            <Results
+              audit={audit}
+              onGenerateReport={generateReport}
+              onRescan={rescan}
+              isReporting={isReporting}
+              report={report}
+              isCached={isCached}
+              isReportCached={isReportCached}
+              isLockedPreview={isLockedPreview}
+              user={user}
+              isPaid={isPaid}
+              onSignIn={signInWithGoogle}
+            />
+          ) : null}
+        </section>
+      </div>
     </main>
   );
 }
 
-function Header({
+function formatScanHost(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+function formatScanDate(value: string) {
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(value));
+}
+
+function Sidebar({
   user,
   isPaid,
+  pastScans,
+  credits,
   onSignIn,
   onSignOut,
+  onSelectPastScan,
 }: {
   user: CurrentUser | null;
   isPaid: boolean;
+  pastScans: PastScan[];
+  credits: AccountCredits;
   onSignIn: () => void;
   onSignOut: () => void;
+  onSelectPastScan: (url: string) => void;
 }) {
+  const [pastScansOpen, setPastScansOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const creditsRemaining = Math.max(0, credits.limit - credits.used);
+
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-orange-500/30 bg-orange-500/10">
-          <Flame className="h-5 w-5 text-orange-400" />
-        </div>
-        <div>
-          <p className="font-semibold tracking-tight">AgentDocs Auditor</p>
-          <p className="text-xs text-muted-foreground">Human docs. Agent docs. LLM discovery.</p>
-        </div>
-      </div>
-      {user ? (
+    <aside className="flex shrink-0 flex-col justify-between gap-6 rounded-3xl border border-white/10 bg-[#0f1115]/80 p-4 shadow-2xl shadow-black/30 backdrop-blur lg:sticky lg:top-5 lg:min-h-[16.5rem] lg:w-64 lg:self-start">
+      <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <div className="hidden text-right sm:block">
-            <p className="text-sm font-medium">{user.name ?? user.email}</p>
-            <p className="text-xs text-muted-foreground">{isPaid ? "Paid account" : "Free account"}</p>
+          <DocScannerMark className="h-11 w-11" />
+          <div>
+            <p className="text-xl font-semibold tracking-[-0.03em]">DocScanner</p>
+            <p className="text-xs text-orange-200">Scan. Score. Improve.</p>
           </div>
-          <Button variant="outline" size="sm" onClick={onSignOut}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign out
-          </Button>
         </div>
-      ) : (
-        <Button variant="outline" size="sm" onClick={onSignIn} className="border-orange-500/30 text-orange-200">
-          <LogIn className="mr-2 h-4 w-4" />
-          Sign in with Google
-        </Button>
-      )}
+
+        {user ? (
+          <nav className="grid gap-1">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2.5 text-sm text-orange-100">
+              <span className="flex min-w-0 items-center gap-3">
+                <Gauge className="h-4 w-4 shrink-0" />
+                <span className="truncate">Credits</span>
+              </span>
+              <span className="shrink-0 text-xs text-orange-200">
+                {creditsRemaining}/{credits.limit}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setPastScansOpen((open) => !open)}
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-muted-foreground transition hover:bg-white/[0.04] hover:text-foreground"
+            >
+              <span className="flex items-center gap-3">
+                <History className="h-4 w-4" />
+                Past scans
+              </span>
+              <ChevronDown className={`h-4 w-4 transition ${pastScansOpen ? "rotate-180" : ""}`} />
+            </button>
+            {pastScansOpen ? (
+              <div className="grid gap-1 pl-2">
+                {pastScans.length > 0 ? (
+                  pastScans.map((scan) => (
+                    <button
+                      key={scan.id}
+                      type="button"
+                      onClick={() => onSelectPastScan(scan.url)}
+                      className="rounded-xl border border-transparent px-3 py-2 text-left transition hover:border-white/10 hover:bg-white/[0.04]"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm">{formatScanHost(scan.url)}</p>
+                        <span className="shrink-0 text-xs text-orange-200">{scan.score}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{formatScanDate(scan.scannedAt)}</p>
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-3 py-1 text-xs text-muted-foreground">No scans yet. Run your first audit above.</p>
+                )}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => setProfileOpen((open) => !open)}
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm text-muted-foreground transition hover:bg-white/[0.04] hover:text-foreground"
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                <User className="h-4 w-4 shrink-0" />
+                <span className="truncate">Profile</span>
+              </span>
+              <ChevronDown className={`h-4 w-4 shrink-0 transition ${profileOpen ? "rotate-180" : ""}`} />
+            </button>
+            {profileOpen ? (
+              <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{user.name ?? "Signed in"}</p>
+                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{isPaid ? "Paid account" : "Free account"}</p>
+                <Button variant="outline" size="sm" onClick={onSignOut} className="w-full">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </Button>
+              </div>
+            ) : null}
+          </nav>
+        ) : (
+          <nav className="grid gap-1">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2.5 text-sm text-orange-100">
+              <span className="flex items-center gap-3">
+                <Gauge className="h-4 w-4" />
+                Credits
+              </span>
+              <span className="text-xs text-orange-200">0/0</span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-muted-foreground">
+              <span className="flex items-center gap-3">
+                <History className="h-4 w-4" />
+                Past scans
+              </span>
+              <Lock className="h-3.5 w-3.5" />
+            </div>
+            <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-muted-foreground">
+              <span className="flex items-center gap-3">
+                <User className="h-4 w-4" />
+                Profile
+              </span>
+              <Lock className="h-3.5 w-3.5" />
+            </div>
+          </nav>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {!user ? (
+          <Button variant="outline" size="sm" onClick={onSignIn} className="w-full border-orange-500/30 text-orange-200">
+            <LogIn className="mr-2 h-4 w-4" />
+            Sign in with Google
+          </Button>
+        ) : null}
+
+        <p className="text-center text-xs text-muted-foreground">
+          Made by{" "}
+          <a
+            href="https://x.com/juampitech"
+            target="_blank"
+            rel="noreferrer"
+            className="text-orange-200 underline-offset-4 transition hover:text-orange-100 hover:underline"
+          >
+            juampi
+          </a>
+        </p>
+      </div>
+    </aside>
+  );
+}
+
+function DocScannerMark({ className = "h-10 w-10" }: { className?: string }) {
+  return (
+    <div className={`relative grid place-items-center rounded-2xl border border-orange-500/25 bg-orange-500/10 ${className}`}>
+      <span className="absolute h-7 w-7 rounded-full border-2 border-orange-500/90 border-r-transparent" />
+      <span className="absolute h-4 w-4 rounded-full border-2 border-orange-300/80 border-b-transparent" />
+      <span className="h-2.5 w-2.5 rounded-full bg-orange-500 shadow-[0_0_22px_rgba(255,106,0,0.95)]" />
+      <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-orange-300" />
     </div>
   );
 }
 
 function ScanPanel({ audit, isAuditing }: { audit: AuditResult | null; isAuditing: boolean }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 p-5">
-      <div className="mb-5 flex items-center justify-between">
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0b0c0e]/70 p-5 shadow-inner shadow-black/30">
+      <div className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full border border-white/10 bg-[radial-gradient(circle,rgba(255,106,0,0.35)_0_4%,transparent_5%),repeating-radial-gradient(circle,rgba(255,255,255,0.1)_0_1px,transparent_1px_32px)]" />
+      <div className="relative mb-5 flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium">Scan pipeline</p>
-          <p className="text-xs text-muted-foreground">Bounded Firecrawl map + targeted scrape</p>
+          <p className="text-sm font-medium">What you get</p>
+          <p className="text-xs text-muted-foreground">Audit output in one run</p>
         </div>
         <Activity className="h-4 w-4 text-orange-300" />
       </div>
-      <div className="space-y-3">
-        {scanSteps.map((step, index) => (
+      <div className="relative space-y-3">
+        {scanOutputs.map((output, index) => (
           <div
-            key={step}
-            className="flex items-center gap-3 rounded-xl border border-white/10 bg-background/40 px-3 py-3"
+            key={output.title}
+            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-3.5"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500/10 text-xs text-orange-300">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-orange-500/25 bg-orange-500/10 text-xs text-orange-300">
               {isAuditing ? <span className="animate-pulse">{index + 1}</span> : <CheckCircle2 className="h-4 w-4" />}
             </div>
-            <span className="text-sm">{step}</span>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">{output.title}</p>
+              <p className="truncate text-xs text-muted-foreground">{output.detail}</p>
+            </div>
           </div>
         ))}
       </div>
       {audit ? (
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          <MiniMetric label="URLs" value={audit.stats.discoveredUrls} />
-          <MiniMetric label="Pages" value={audit.stats.scannedPages} />
-          <MiniMetric label="Assets" value={audit.assets.length} />
+        <div className="relative mt-5 grid grid-cols-3 gap-3">
+          <MiniMetric label="Links" value={audit.stats.discoveredUrls} icon={Search} />
+          <MiniMetric label="Scanned" value={audit.stats.scannedPages} icon={FileText} />
+          <MiniMetric label="Assets" value={audit.assets.length} icon={Sparkles} />
         </div>
       ) : null}
     </div>
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: number }) {
+function MiniMetric({ label, value, icon: Icon }: { label: string; value: number; icon?: typeof Activity }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-background/40 p-3">
+    <div className="rounded-2xl border border-white/10 bg-[#111317]/80 p-3">
+      {Icon ? <Icon className="mb-2 h-3.5 w-3.5 text-orange-300" /> : null}
       <p className="font-mono text-lg">{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
@@ -353,7 +541,7 @@ function LoadingScorecard() {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
-        <Card key={index} className="bg-card/80">
+        <Card key={index} className="border-white/10 bg-[#111317]/80">
           <CardHeader>
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-4 w-56" />
@@ -394,15 +582,35 @@ function Results({
 }) {
   const checks = useMemo(() => audit.categories.flatMap((category) => category.checks), [audit]);
   const failingChecks = checks.filter((check) => check.status !== "pass");
+  const statusCounts = useMemo(
+    () => ({
+      pass: checks.filter((check) => check.status === "pass").length,
+      warn: checks.filter((check) => check.status === "warn").length,
+      fail: checks.filter((check) => check.status === "fail").length,
+    }),
+    [checks]
+  );
+  const [activeTab, setActiveTab] = useState("issues");
+  const reportSectionRef = useRef<HTMLDivElement>(null);
+
+  function openReportTab() {
+    setActiveTab("report");
+    requestAnimationFrame(() => {
+      reportSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   return (
     <div className="relative space-y-6">
       {isLockedPreview ? <LockedPreviewOverlay onSignIn={onSignIn} /> : null}
-      <div className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
-        <Card className="bg-card/80">
-          <CardHeader>
+      <div className="grid gap-5 xl:grid-cols-[0.88fr_1.12fr]">
+        <Card className="border-white/10 bg-[#111317]/85 shadow-xl shadow-black/20">
+          <CardHeader className="pb-0">
             <div className="flex items-center justify-between gap-3">
-              <CardTitle>Overall Score</CardTitle>
+              <div>
+                <CardTitle>Overall Score</CardTitle>
+                <CardDescription>{audit.normalizedUrl}</CardDescription>
+              </div>
               {isCached ? (
                 <Badge variant="outline" className="border-emerald-500/30 text-emerald-300">
                   Stored scan
@@ -415,21 +623,25 @@ function Results({
                 <Badge variant="outline">Fresh scan</Badge>
               )}
             </div>
-            <CardDescription>{audit.normalizedUrl}</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center gap-6">
+          <CardContent className="flex flex-col items-center gap-5 p-5">
             <ScoreRing score={audit.overallScore} />
             <div className="grid w-full grid-cols-3 gap-3">
-              <MiniMetric label="Links" value={audit.stats.discoveredUrls} />
-              <MiniMetric label="Scanned" value={audit.stats.scannedPages} />
-              <MiniMetric label="Issues" value={failingChecks.length} />
+              <MiniMetric label="Links" value={audit.stats.discoveredUrls} icon={Globe2} />
+              <MiniMetric label="Scanned" value={audit.stats.scannedPages} icon={FileText} />
+              <MiniMetric label="Issues" value={failingChecks.length} icon={AlertTriangle} />
+            </div>
+            <div className="grid w-full grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-black/20 p-2">
+              <StatusPill status="pass" value={statusCounts.pass} />
+              <StatusPill status="warn" value={statusCounts.warn} />
+              <StatusPill status="fail" value={statusCounts.fail} />
             </div>
             <Button
-              onClick={onGenerateReport}
-              disabled={isReporting || isLockedPreview || !user}
+              onClick={openReportTab}
+              disabled={isLockedPreview || !user}
               className="w-full bg-orange-500 text-black hover:bg-orange-400"
             >
-              {isReporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+              <FileText className="mr-2 h-4 w-4" />
               Generate remediation package
             </Button>
             {isPaid ? (
@@ -448,8 +660,9 @@ function Results({
         </div>
       </div>
 
-      <Tabs defaultValue="issues" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <div ref={reportSectionRef}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 border border-white/10 bg-[#111317]/80">
           <TabsTrigger value="issues">Issues</TabsTrigger>
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="checks">Checks</TabsTrigger>
@@ -474,6 +687,7 @@ function Results({
           />
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }
@@ -483,12 +697,13 @@ function ScoreRing({ score }: { score: number }) {
   const offset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="relative grid h-40 w-40 place-items-center">
-      <svg className="h-40 w-40 -rotate-90">
-        <circle cx="80" cy="80" r="54" stroke="currentColor" strokeWidth="10" fill="none" className="text-muted" />
+    <div className="relative grid h-44 w-44 place-items-center">
+      <div className="absolute inset-3 rounded-full bg-[radial-gradient(circle,rgba(255,106,0,0.18),transparent_58%)]" />
+      <svg viewBox="0 0 176 176" className="h-44 w-44 -rotate-90">
+        <circle cx="88" cy="88" r="54" stroke="currentColor" strokeWidth="10" fill="none" className="text-white/10" />
         <circle
-          cx="80"
-          cy="80"
+          cx="88"
+          cy="88"
           r="54"
           stroke="currentColor"
           strokeWidth="10"
@@ -507,12 +722,27 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+function StatusPill({ status, value }: { status: CheckStatus; value: number }) {
+  const styles = {
+    pass: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+    warn: "border-amber-500/25 bg-amber-500/10 text-amber-300",
+    fail: "border-red-500/25 bg-red-500/10 text-red-300",
+  } satisfies Record<CheckStatus, string>;
+
+  return (
+    <div className={`rounded-xl border px-2 py-2 text-center ${styles[status]}`}>
+      <p className="font-mono text-base">{value}</p>
+      <p className="text-[11px] capitalize opacity-80">{status}</p>
+    </div>
+  );
+}
+
 function LockedPreviewOverlay({ onSignIn }: { onSignIn: () => void }) {
   return (
-    <div className="absolute inset-0 z-10 flex items-start justify-center rounded-2xl bg-background/20 pt-24 backdrop-blur-sm">
-      <Card className="mx-4 max-w-md border-orange-500/30 bg-card/95 shadow-2xl">
+    <div className="absolute inset-0 z-10 flex items-start justify-center rounded-3xl bg-background/20 pt-24 backdrop-blur-sm">
+      <Card className="mx-4 max-w-md border-orange-500/30 bg-[#111317]/95 shadow-2xl">
         <CardContent className="flex flex-col items-center gap-4 p-6 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/10">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-orange-500/25 bg-orange-500/10">
             <Lock className="h-5 w-5 text-orange-300" />
           </div>
           <div>
@@ -533,19 +763,35 @@ function LockedPreviewOverlay({ onSignIn }: { onSignIn: () => void }) {
 
 function CategoryCard({ category }: { category: AuditCategory }) {
   return (
-    <Card className="bg-card/80 transition hover:border-orange-500/30">
+    <Card className="border-white/10 bg-[#111317]/85 transition hover:border-orange-500/30 hover:bg-[#171a1f]">
       <CardHeader className="space-y-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">{category.title}</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-xl border border-orange-500/20 bg-orange-500/10">
+              <CategoryIcon categoryId={category.id} />
+            </div>
+            <CardTitle className="text-base">{category.title}</CardTitle>
+          </div>
           <ScoreBadge score={category.score} />
         </div>
         <CardDescription>{category.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <Progress value={category.score} className="h-2" />
+        <Progress value={category.score} className="h-2 bg-white/10 [&_[data-slot=progress-indicator]]:bg-orange-500" />
       </CardContent>
     </Card>
   );
+}
+
+function CategoryIcon({ categoryId }: { categoryId: string }) {
+  const normalizedId = categoryId.toLowerCase();
+
+  if (normalizedId.includes("agent")) return <Bot className="h-4 w-4 text-orange-300" />;
+  if (normalizedId.includes("developer")) return <Code2 className="h-4 w-4 text-orange-300" />;
+  if (normalizedId.includes("api")) return <Gauge className="h-4 w-4 text-orange-300" />;
+  if (normalizedId.includes("content")) return <Sparkles className="h-4 w-4 text-orange-300" />;
+  if (normalizedId.includes("trust")) return <ShieldCheck className="h-4 w-4 text-orange-300" />;
+  return <Target className="h-4 w-4 text-orange-300" />;
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -565,15 +811,22 @@ function ScoreBadge({ score }: { score: number }) {
 
 function IssueList({ checks }: { checks: AuditCheck[] }) {
   return (
-    <Card className="bg-card/80">
+    <Card className="border-white/10 bg-[#111317]/85">
       <CardHeader>
-        <CardTitle>Highest-Signal Gaps</CardTitle>
-        <CardDescription>The report generator expands these into human-readable and agent-executable fixes.</CardDescription>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <CardTitle>Highest-Signal Gaps</CardTitle>
+            <CardDescription>The report generator expands these into human-readable and agent-executable fixes.</CardDescription>
+          </div>
+          <Badge variant="outline" className="border-orange-500/30 text-orange-200">
+            {checks.length} issues
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {checks.length ? (
           checks.slice(0, 10).map((check) => (
-            <div key={check.id} className="rounded-xl border border-border bg-background/50 p-4">
+            <div key={check.id} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-orange-500/25">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
@@ -583,7 +836,10 @@ function IssueList({ checks }: { checks: AuditCheck[] }) {
                   <p className="mt-1 text-sm text-muted-foreground">{check.description}</p>
                   {check.fix ? <p className="mt-3 text-sm text-orange-200">Fix: {check.fix}</p> : null}
                 </div>
-                <Badge variant="outline">{check.weight} pts</Badge>
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <StatusBadge status={check.status} />
+                  <Badge variant="outline">{check.weight} pts</Badge>
+                </div>
               </div>
             </div>
           ))
@@ -595,9 +851,24 @@ function IssueList({ checks }: { checks: AuditCheck[] }) {
   );
 }
 
+function StatusBadge({ status }: { status: CheckStatus }) {
+  const className =
+    status === "pass"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+      : status === "warn"
+        ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+        : "border-red-500/30 bg-red-500/10 text-red-300";
+
+  return (
+    <Badge variant="outline" className={className}>
+      {status}
+    </Badge>
+  );
+}
+
 function AssetGrid({ audit }: { audit: AuditResult }) {
   return (
-    <Card className="bg-card/80">
+    <Card className="border-white/10 bg-[#111317]/85">
       <CardHeader>
         <CardTitle>Detected Assets</CardTitle>
         <CardDescription>Docs, videos, packages, socials, trust pages, and machine-readable entrypoints.</CardDescription>
@@ -610,10 +881,12 @@ function AssetGrid({ audit }: { audit: AuditResult }) {
               href={asset.url}
               target="_blank"
               rel="noreferrer"
-              className="group rounded-xl border border-border bg-background/50 p-4 transition hover:border-orange-500/40"
+              className="group rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-orange-500/40"
             >
               <div className="flex items-center justify-between gap-3">
-                <Badge variant="secondary">{asset.type}</Badge>
+                <Badge variant="secondary" className="bg-white/10">
+                  {asset.type}
+                </Badge>
                 <ExternalLink className="h-4 w-4 text-muted-foreground transition group-hover:text-orange-300" />
               </div>
               <p className="mt-3 truncate text-sm">{asset.label}</p>
@@ -628,10 +901,10 @@ function AssetGrid({ audit }: { audit: AuditResult }) {
 
 function ChecksTable({ categories }: { categories: AuditCategory[] }) {
   return (
-    <Card className="bg-card/80">
+    <Card className="border-white/10 bg-[#111317]/85">
       <CardHeader>
-        <CardTitle>Raw Checks</CardTitle>
-        <CardDescription>Transparent scoring evidence, intentionally picky.</CardDescription>
+        <CardTitle>Checks</CardTitle>
+        <CardDescription>Detailed results with evidence and remediation guidance.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -641,9 +914,9 @@ function ChecksTable({ categories }: { categories: AuditCategory[] }) {
                 <p className="font-medium">{category.title}</p>
                 <ScoreBadge score={category.score} />
               </div>
-              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+              <div className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10">
                 {category.checks.map((check) => (
-                  <div key={check.id} className="grid gap-3 bg-background/40 p-4 md:grid-cols-[1fr_auto]">
+                  <div key={check.id} className="grid gap-3 bg-black/20 p-4 md:grid-cols-[1fr_auto]">
                     <div className="flex gap-3">
                       <StatusIcon status={check.status} />
                       <div>
@@ -651,7 +924,7 @@ function ChecksTable({ categories }: { categories: AuditCategory[] }) {
                         <p className="text-xs text-muted-foreground">{check.evidence ?? check.description}</p>
                       </div>
                     </div>
-                    <Badge variant="outline">{check.status}</Badge>
+                    <StatusBadge status={check.status} />
                   </div>
                 ))}
               </div>
@@ -678,7 +951,7 @@ function ReportPanel({
 }) {
   if (isReporting) {
     return (
-      <Card className="bg-card/80">
+      <Card className="border-white/10 bg-[#111317]/85">
         <CardContent className="space-y-4 p-6">
           <Skeleton className="h-6 w-56" />
           <Skeleton className="h-4 w-full" />
@@ -691,9 +964,11 @@ function ReportPanel({
 
   if (!report) {
     return (
-      <Card className="bg-card/80">
+      <Card className="border-white/10 bg-[#111317]/85">
         <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
-          <FileText className="h-10 w-10 text-orange-300" />
+          <div className="grid h-14 w-14 place-items-center rounded-2xl border border-orange-500/25 bg-orange-500/10">
+            <FileText className="h-6 w-6 text-orange-300" />
+          </div>
           <div>
             <p className="font-medium">Generate the full remediation plan</p>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
@@ -710,7 +985,7 @@ function ReportPanel({
   }
 
   return (
-    <Card className="bg-card/80">
+    <Card className="border-white/10 bg-[#111317]/85">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{report.title}</CardTitle>
@@ -724,7 +999,7 @@ function ReportPanel({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="human" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 border border-white/10 bg-black/20">
             <TabsTrigger value="human">Executive Report</TabsTrigger>
             <TabsTrigger value="agent">Agent TXT</TabsTrigger>
           </TabsList>
