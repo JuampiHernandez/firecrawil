@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  Copy,
+  Download,
   ExternalLink,
   FileText,
   Flame,
@@ -733,19 +735,25 @@ function ReportPanel({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="human" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="human">Human / PDF</TabsTrigger>
-            <TabsTrigger value="agent">Agent File</TabsTrigger>
-            <TabsTrigger value="combined">Combined</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="human">Executive Report</TabsTrigger>
+            <TabsTrigger value="agent">Agent TXT</TabsTrigger>
           </TabsList>
           <TabsContent value="human" className="mt-4">
-            <ReportMarkdown title="Human remediation report" markdown={report.humanReportMarkdown} />
+            <ReportMarkdown
+              title="Human-readable remediation report"
+              description="Doc-style report for technical, product, and DevRel teams."
+              markdown={report.humanReportMarkdown}
+              variant="human"
+            />
           </TabsContent>
           <TabsContent value="agent" className="mt-4">
-            <ReportMarkdown title="Agent remediation instructions" markdown={report.agentInstructionsMarkdown} />
-          </TabsContent>
-          <TabsContent value="combined" className="mt-4">
-            <ReportMarkdown title="Full remediation package" markdown={report.rawMarkdown} />
+            <ReportMarkdown
+              title="Agent-ready remediation TXT"
+              description="Copy this into Cursor, Claude Code, or another coding agent so it knows what to fix and how."
+              markdown={report.agentInstructionsMarkdown}
+              variant="agent"
+            />
           </TabsContent>
         </Tabs>
       </CardContent>
@@ -753,20 +761,271 @@ function ReportPanel({
   );
 }
 
-function ReportMarkdown({ title, markdown }: { title: string; markdown: string }) {
+function ReportMarkdown({
+  title,
+  description,
+  markdown,
+  variant,
+}: {
+  title: string;
+  description: string;
+  markdown: string;
+  variant: "human" | "agent";
+}) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyMarkdown() {
+    await navigator.clipboard.writeText(markdown);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  function downloadTxt() {
+    const blob = new Blob([markdown], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${filenameFromTitle(title)}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadPdf() {
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=900,height=1200");
+
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    printWindow.document.write(buildPrintableReportHtml(title, markdown));
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  }
+
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-sm font-medium">{title}</p>
-        <Badge variant="outline" className="border-orange-500/30 text-orange-200">
-          Markdown
-        </Badge>
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-medium">{title}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {variant === "human" ? (
+            <Button variant="outline" size="sm" onClick={downloadPdf}>
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={copyMarkdown}>
+                <Copy className="mr-2 h-4 w-4" />
+                {copied ? "Copied" : "Copy TXT"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={downloadTxt}>
+                <Download className="mr-2 h-4 w-4" />
+                Download .txt
+              </Button>
+            </>
+          )}
+        </div>
       </div>
-      <ScrollArea className="h-[520px] rounded-xl border border-border bg-black/30 p-4">
-        <pre className="whitespace-pre-wrap font-mono text-xs leading-6 text-zinc-200">{markdown}</pre>
+      <ScrollArea
+        className={
+          variant === "human"
+            ? "h-[640px] rounded-xl border border-border bg-zinc-50 p-0 text-zinc-950"
+            : "h-[640px] rounded-xl border border-border bg-black/30 p-4"
+        }
+      >
+        {variant === "human" ? (
+          <article className="mx-auto max-w-4xl space-y-4 px-6 py-8 leading-7 sm:px-10">
+            <MarkdownDocument markdown={markdown} />
+          </article>
+        ) : (
+          <pre className="whitespace-pre-wrap font-mono text-xs leading-6 text-zinc-200">{markdown}</pre>
+        )}
       </ScrollArea>
     </div>
   );
+}
+
+function MarkdownDocument({ markdown }: { markdown: string }) {
+  const blocks = parseMarkdownBlocks(markdown);
+
+  return (
+    <>
+      {blocks.map((block, index) => {
+        if (block.type === "heading") {
+          const HeadingTag = `h${Math.min(block.level, 3)}` as "h1" | "h2" | "h3";
+          const className =
+            block.level === 1
+              ? "text-3xl font-semibold tracking-tight"
+              : block.level === 2
+                ? "pt-5 text-xl font-semibold"
+                : "pt-3 text-base font-semibold";
+
+          return (
+            <HeadingTag key={index} className={className}>
+              {block.text}
+            </HeadingTag>
+          );
+        }
+
+        if (block.type === "list") {
+          return (
+            <ul key={index} className="list-disc space-y-2 pl-6 text-sm">
+              {block.items.map((item, itemIndex) => (
+                <li key={itemIndex}>{stripMarkdownEmphasis(item)}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        if (block.type === "code") {
+          return (
+            <pre key={index} className="overflow-x-auto rounded-xl bg-zinc-950 p-4 text-xs leading-6 text-zinc-100">
+              <code>{block.text}</code>
+            </pre>
+          );
+        }
+
+        return (
+          <p key={index} className="text-sm text-zinc-800">
+            {stripMarkdownEmphasis(block.text)}
+          </p>
+        );
+      })}
+    </>
+  );
+}
+
+type MarkdownBlock =
+  | { type: "heading"; level: number; text: string }
+  | { type: "paragraph"; text: string }
+  | { type: "list"; items: string[] }
+  | { type: "code"; text: string };
+
+function parseMarkdownBlocks(markdown: string): MarkdownBlock[] {
+  const blocks: MarkdownBlock[] = [];
+  const lines = markdown.split("\n");
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index]?.trimEnd() ?? "";
+
+    if (!line.trim()) {
+      index += 1;
+      continue;
+    }
+
+    if (line.startsWith("```")) {
+      const codeLines: string[] = [];
+      index += 1;
+      while (index < lines.length && !lines[index]?.startsWith("```")) {
+        codeLines.push(lines[index] ?? "");
+        index += 1;
+      }
+      blocks.push({ type: "code", text: codeLines.join("\n") });
+      index += 1;
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,6})\s+(.+)$/);
+    if (heading) {
+      blocks.push({ type: "heading", level: heading[1].length, text: stripMarkdownEmphasis(heading[2]) });
+      index += 1;
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      const items: string[] = [];
+      while (index < lines.length && /^[-*]\s+/.test(lines[index]?.trimEnd() ?? "")) {
+        items.push((lines[index] ?? "").replace(/^[-*]\s+/, ""));
+        index += 1;
+      }
+      blocks.push({ type: "list", items });
+      continue;
+    }
+
+    const paragraphLines = [line];
+    index += 1;
+    while (
+      index < lines.length &&
+      lines[index]?.trim() &&
+      !lines[index]?.startsWith("#") &&
+      !lines[index]?.startsWith("```") &&
+      !/^[-*]\s+/.test(lines[index]?.trimEnd() ?? "")
+    ) {
+      paragraphLines.push(lines[index]?.trimEnd() ?? "");
+      index += 1;
+    }
+    blocks.push({ type: "paragraph", text: paragraphLines.join(" ") });
+  }
+
+  return blocks;
+}
+
+function stripMarkdownEmphasis(text: string) {
+  return text.replace(/\*\*(.*?)\*\*/g, "$1").replace(/__(.*?)__/g, "$1").replace(/`([^`]+)`/g, "$1");
+}
+
+function filenameFromTitle(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function buildPrintableReportHtml(title: string, markdown: string) {
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(title)}</title>
+    <style>
+      @page { margin: 0.7in; }
+      body { color: #18181b; font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.65; }
+      h1 { font-size: 28px; line-height: 1.2; margin: 0 0 18px; }
+      h2 { border-top: 1px solid #e4e4e7; font-size: 18px; margin: 28px 0 10px; padding-top: 18px; }
+      h3 { font-size: 14px; margin: 20px 0 8px; }
+      p { margin: 0 0 10px; }
+      ul { margin: 0 0 14px 20px; padding: 0; }
+      li { margin: 0 0 6px; }
+      pre { background: #18181b; border-radius: 10px; color: #fafafa; overflow-wrap: break-word; padding: 14px; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>${markdownToHtml(markdown)}</body>
+</html>`;
+}
+
+function markdownToHtml(markdown: string) {
+  return parseMarkdownBlocks(markdown)
+    .map((block) => {
+      if (block.type === "heading") {
+        const level = Math.min(block.level, 3);
+        return `<h${level}>${escapeHtml(block.text)}</h${level}>`;
+      }
+      if (block.type === "list") {
+        return `<ul>${block.items.map((item) => `<li>${escapeHtml(stripMarkdownEmphasis(item))}</li>`).join("")}</ul>`;
+      }
+      if (block.type === "code") {
+        return `<pre><code>${escapeHtml(block.text)}</code></pre>`;
+      }
+      return `<p>${escapeHtml(stripMarkdownEmphasis(block.text))}</p>`;
+    })
+    .join("\n");
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function buildLockedPreviewAudit(inputUrl: string): AuditResult {

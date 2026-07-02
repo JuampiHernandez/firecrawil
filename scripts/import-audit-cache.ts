@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { AuditReport, AuditResult } from "../src/lib/audit/types";
 
 type CacheSource = {
@@ -52,7 +52,7 @@ type LegacyReportRecord = {
 
 type CacheRecord = AuditCacheRecord | ReportCacheRecord | LegacyReportRecord;
 
-let supabase: ReturnType<typeof createClient>;
+let supabase: SupabaseClient;
 
 void main();
 
