@@ -681,7 +681,7 @@ function PricingSection({
             </Badge>
             <CardTitle className="text-2xl tracking-[-0.03em]">Add scan credits when you need them</CardTitle>
             <CardDescription>
-              Free accounts start with 1 fresh scan. Stored scans never consume credits.
+              Free accounts start with 2 fresh scans. Stored scans never consume credits.
             </CardDescription>
           </div>
           {user ? (

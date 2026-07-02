@@ -28,7 +28,7 @@ async function getAuditAppProps() {
     ]);
 
     const isPaid = Boolean(profile?.is_paid);
-    const creditsGranted = profile?.credits_granted ?? 1;
+    const creditsGranted = profile?.credits_granted ?? 2;
     const creditsUsed = profile?.credits_used ?? 0;
 
     return {
