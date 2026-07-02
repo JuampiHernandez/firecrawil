@@ -1,3 +1,72 @@
+# AgentDocs Auditor
+
+A Firecrawl-powered Lighthouse for developer platforms.
+
+Enter a product or docs URL and the app returns a minimalist scorecard for:
+
+- Agent readiness
+- Developer onboarding
+- API and SDK coverage
+- Content and demo assets
+- Trust and community signals
+- LLM discoverability
+
+The scorecard is intentionally deterministic and evidence-based. The **Generate remediation report** button turns the audit into a deeper plan with concrete fixes, CTAs, and a draft `llms.txt`.
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env.local
+```
+
+Add:
+
+```bash
+FIRECRAWL_API_KEY=fc-your-key
+```
+
+Optional:
+
+```bash
+AI_GATEWAY_API_KEY=your-ai-gateway-key
+```
+
+If no AI key is configured, report generation uses a deterministic fallback report.
+
+## Run
+
+```bash
+npm run dev
+```
+
+If Next.js has trouble enumerating network interfaces locally, bind it explicitly:
+
+```bash
+npm run dev -- -H 127.0.0.1 -p 3001
+```
+
+## Build
+
+```bash
+npm run lint
+npm run build
+```
+
+## How It Uses Firecrawl
+
+- `/map` discovers public URLs.
+- `/scrape` collects Markdown, links, and metadata from high-signal pages.
+- Well-known checks look for `llms.txt`, `llms-full.txt`, `sitemap.xml`, and OpenAPI files.
+- The scoring engine classifies docs, quickstarts, API references, SDKs, GitHub/package links, videos, blogs, changelogs, pricing, status, security, community, socials, playgrounds, and LLM entrypoints.
+
+## Next Product Steps
+
+- Add saved audits and benchmark comparisons.
+- Add Firecrawl `/agent` discovery for off-site official assets.
+- Add Firecrawl `/monitor` for recurring docs quality checks.
+- Add PDF export for reports.
+- Add authenticated workspaces for teams.
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
