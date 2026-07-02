@@ -13,9 +13,38 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const appName = "DocScanner";
+const appDescription = "Scan, score, and improve agent-ready developer documentation.";
+const previewImage = {
+  url: "/docscanner-twitter-preview.png",
+  width: 1024,
+  height: 537,
+  alt: "DocScanner preview showing the product name and an orange score gauge.",
+};
+
 export const metadata: Metadata = {
-  title: "DocScanner",
-  description: "Scan, score, and improve agent-ready developer documentation.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  title: appName,
+  description: appDescription,
+  applicationName: appName,
+  icons: {
+    icon: "/docscanner-icon.svg",
+    shortcut: "/docscanner-icon.svg",
+    apple: "/docscanner-icon.svg",
+  },
+  openGraph: {
+    title: appName,
+    description: appDescription,
+    type: "website",
+    siteName: appName,
+    images: [previewImage],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: appName,
+    description: appDescription,
+    images: [previewImage],
+  },
 };
 
 export default function RootLayout({
