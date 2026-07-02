@@ -48,6 +48,8 @@ export async function POST(request: Request) {
     );
   }
 
+  const credits = await getAccountCredits(supabase, user.id);
+
   // Cache lookup: exact host first, then any derivative on the same root domain.
   if (!parsed.data.force) {
     const { data: exact } = await supabase
@@ -61,6 +63,7 @@ export async function POST(request: Request) {
         auditId: exact.id,
         cached: true,
         audit: exact.result as AuditResult,
+        credits: credits ?? undefined,
       } satisfies AuditApiResponse);
     }
 
@@ -77,23 +80,18 @@ export async function POST(request: Request) {
         auditId: derivative.id,
         cached: true,
         audit: derivative.result as AuditResult,
+        credits: credits ?? undefined,
       } satisfies AuditApiResponse);
     }
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_paid")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile?.is_paid) {
+  if (!credits || credits.remaining < 1) {
     return NextResponse.json(
       {
-        error: "Fresh scans require a paid account. This site has not been audited yet.",
-        code: "paid_required",
+        error: "You are out of scan credits. Add credits to run a fresh audit.",
+        code: "credits_required",
       },
-      { status: 403 },
+      { status: 402 },
     );
   }
 
@@ -132,6 +130,8 @@ export async function POST(request: Request) {
       throw new Error(saveError?.message ?? "Failed to store the audit.");
     }
 
+    const updatedCredits = await getAccountCredits(supabase, user.id);
+
     // A re-scan invalidates the previously generated report.
     if (parsed.data.force) {
       await supabase.from("reports").delete().eq("audit_id", saved.id);
@@ -141,6 +141,7 @@ export async function POST(request: Request) {
       auditId: saved.id,
       cached: false,
       audit,
+      credits: updatedCredits ?? undefined,
     } satisfies AuditApiResponse);
   } catch (error) {
     return NextResponse.json(
@@ -153,4 +154,23 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+async function getAccountCredits(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("credits_granted, credits_used")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  const granted = data.credits_granted ?? 1;
+  const used = data.credits_used ?? 0;
+
+  return {
+    granted,
+    used,
+    remaining: Math.max(0, granted - used),
+  };
 }

@@ -14,12 +14,11 @@ async function getAuditAppProps() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return { user: null, isPaid: false, isSupabaseConfigured: true, pastScans: [], credits: { used: 0, limit: 0 } };
+      return { user: null, isPaid: false, isSupabaseConfigured: true, pastScans: [], credits: { used: 0, granted: 0 } };
     }
 
-    const [{ data: profile }, { count: scansUsed }, { data: pastScans }] = await Promise.all([
-      supabase.from("profiles").select("is_paid").eq("id", user.id).maybeSingle(),
-      supabase.from("audits").select("*", { count: "exact", head: true }).eq("created_by", user.id),
+    const [{ data: profile }, { data: pastScans }] = await Promise.all([
+      supabase.from("profiles").select("is_paid, credits_granted, credits_used").eq("id", user.id).maybeSingle(),
       supabase
         .from("audits")
         .select("id, input_url, normalized_url, overall_score, scanned_at")
@@ -29,6 +28,8 @@ async function getAuditAppProps() {
     ]);
 
     const isPaid = Boolean(profile?.is_paid);
+    const creditsGranted = profile?.credits_granted ?? 1;
+    const creditsUsed = profile?.credits_used ?? 0;
 
     return {
       user: {
@@ -38,8 +39,8 @@ async function getAuditAppProps() {
       isPaid,
       isSupabaseConfigured: true,
       credits: {
-        used: scansUsed ?? 0,
-        limit: isPaid ? 1 : 0,
+        used: creditsUsed,
+        granted: creditsGranted,
       },
       pastScans: (pastScans ?? []).map((scan) => ({
         id: scan.id,
@@ -49,6 +50,6 @@ async function getAuditAppProps() {
       })),
     };
   } catch {
-    return { user: null, isPaid: false, isSupabaseConfigured: false, pastScans: [], credits: { used: 0, limit: 0 } };
+    return { user: null, isPaid: false, isSupabaseConfigured: false, pastScans: [], credits: { used: 0, granted: 0 } };
   }
 }

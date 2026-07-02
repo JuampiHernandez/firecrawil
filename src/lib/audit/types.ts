@@ -84,6 +84,11 @@ export type AuditApiResponse = {
   auditId: string;
   cached: boolean;
   audit: AuditResult;
+  credits?: {
+    used: number;
+    granted: number;
+    remaining: number;
+  };
 };
 
 export type ReportApiResponse = {
