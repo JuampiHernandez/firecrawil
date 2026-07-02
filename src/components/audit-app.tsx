@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Code2,
   Copy,
+  CreditCard,
   Download,
   ExternalLink,
   FileText,
@@ -19,6 +20,8 @@ import {
   LogIn,
   LogOut,
   Loader2,
+  Mail,
+  PackagePlus,
   Radar,
   RefreshCw,
   Search,
@@ -41,6 +44,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AuditApiResponse, AuditCategory, AuditCheck, AuditReport, AuditResult, CheckStatus, ReportApiResponse } from "@/lib/audit/types";
 import { createClient } from "@/lib/supabase/client";
 
+const creditPacks = [
+  {
+    id: "starter",
+    name: "Starter",
+    credits: 2,
+    price: "$1",
+    description: "Run two fresh audits when you need a quick check.",
+    featured: false,
+  },
+  {
+    id: "growth",
+    name: "Growth",
+    credits: 10,
+    price: "$3",
+    description: "Compare more docs sites and keep a few rescans ready.",
+    featured: true,
+  },
+] as const;
+
+const customCreditsEmail = "juampi@juampi.dev";
+const paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === "true";
+
 const scanOutputs = [
   { title: "Ranked issues", detail: "Severity, impact, and evidence" },
   { title: "Readiness score", detail: "Agent, API, LLM, and trust signals" },
@@ -62,8 +87,22 @@ type PastScan = {
 
 type AccountCredits = {
   used: number;
-  limit: number;
+  granted: number;
 };
+
+function buildCreditRequestHref(user: CurrentUser | null) {
+  const subject = "More DocScanner credits";
+  const body = [
+    "Hi Juampi,",
+    "",
+    "I would like more DocScanner credits.",
+    "",
+    `Account: ${user?.email ?? "Add your account email here"}`,
+    "Use case: ",
+  ].join("\n");
+
+  return `mailto:${customCreditsEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 
 export function AuditApp({
   user,
@@ -87,43 +126,62 @@ export function AuditApp({
   const [isLockedPreview, setIsLockedPreview] = useState(false);
   const [isAuditing, setIsAuditing] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
+  const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
+  const [checkoutPackId, setCheckoutPackId] = useState<string | null>(null);
+  const [accountCredits, setAccountCredits] = useState(credits);
   const [error, setError] = useState<string | null>(null);
+  const creditsRemaining = Math.max(0, accountCredits.granted - accountCredits.used);
 
-  async function runScan(event?: FormEvent<HTMLFormElement>) {
+  async function runScan(event?: FormEvent<HTMLFormElement>, scanUrl = url) {
     event?.preventDefault();
     setError(null);
     setReport(null);
     setIsReportCached(false);
-    setIsAuditing(true);
 
     if (!user) {
+      setIsAuditing(true);
       setAudit(null);
       setAuditId(null);
       setIsCached(false);
       setIsLockedPreview(false);
       await new Promise((resolve) => setTimeout(resolve, 1600));
-      setAudit(buildLockedPreviewAudit(url));
+      setAudit(buildLockedPreviewAudit(scanUrl));
       setIsLockedPreview(true);
       setIsAuditing(false);
       return;
     }
 
+    setIsAuditing(true);
+
     try {
       const response = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: scanUrl }),
       });
-      const payload = (await response.json()) as AuditApiResponse & { error?: string };
+      const payload = (await response.json()) as AuditApiResponse & { error?: string; code?: string };
       if (!response.ok) {
+        if (payload.code === "credits_required") {
+          setIsCreditsModalOpen(true);
+        }
         throw new Error(payload.error ?? "Audit failed.");
       }
       setAudit(payload.audit);
       setAuditId(payload.auditId);
       setIsCached(payload.cached);
+      if (payload.credits) {
+        setAccountCredits({
+          used: payload.credits.used,
+          granted: payload.credits.granted,
+        });
+      }
       setIsLockedPreview(false);
     } catch (scanError) {
-      setError(scanError instanceof Error ? scanError.message : "Audit failed.");
+      const message = scanError instanceof Error ? scanError.message : "Audit failed.";
+      if (message.toLowerCase().includes("credits")) {
+        setIsCreditsModalOpen(true);
+      }
+      setError(message);
     } finally {
       setIsAuditing(false);
     }
@@ -154,7 +212,11 @@ export function AuditApp({
   }
 
   async function rescan() {
-    if (!user || !isPaid) return;
+    if (!user) return;
+    if (creditsRemaining < 1) {
+      setIsCreditsModalOpen(true);
+      return;
+    }
     setError(null);
     setReport(null);
     setIsReportCached(false);
@@ -166,18 +228,64 @@ export function AuditApp({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url, force: true }),
       });
-      const payload = (await response.json()) as AuditApiResponse & { error?: string };
+      const payload = (await response.json()) as AuditApiResponse & { error?: string; code?: string };
       if (!response.ok) {
+        if (payload.code === "credits_required") {
+          setIsCreditsModalOpen(true);
+        }
         throw new Error(payload.error ?? "Audit failed.");
       }
       setAudit(payload.audit);
       setAuditId(payload.auditId);
       setIsCached(payload.cached);
+      if (payload.credits) {
+        setAccountCredits({
+          used: payload.credits.used,
+          granted: payload.credits.granted,
+        });
+      }
       setIsLockedPreview(false);
     } catch (scanError) {
-      setError(scanError instanceof Error ? scanError.message : "Audit failed.");
+      const message = scanError instanceof Error ? scanError.message : "Audit failed.";
+      if (message.toLowerCase().includes("credits")) {
+        setIsCreditsModalOpen(true);
+      }
+      setError(message);
     } finally {
       setIsAuditing(false);
+    }
+  }
+
+  async function buyCredits(packId: string) {
+    if (!paymentsEnabled) {
+      window.location.href = buildCreditRequestHref(user);
+      return;
+    }
+
+    if (!user) {
+      await signInWithGoogle();
+      return;
+    }
+
+    setError(null);
+    setCheckoutPackId(packId);
+
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packId }),
+      });
+      const payload = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !payload.url) {
+        throw new Error(payload.error ?? "Could not create checkout.");
+      }
+
+      window.location.assign(payload.url);
+    } catch (checkoutError) {
+      setError(checkoutError instanceof Error ? checkoutError.message : "Could not create checkout.");
+      setCheckoutPackId(null);
     }
   }
 
@@ -211,7 +319,7 @@ export function AuditApp({
 
   async function loadPastScan(scanUrl: string) {
     setUrl(scanUrl);
-    await runScan();
+    await runScan(undefined, scanUrl);
   }
 
   return (
@@ -223,10 +331,11 @@ export function AuditApp({
           user={user}
           isPaid={isPaid}
           pastScans={pastScans}
-          credits={credits}
+          credits={accountCredits}
           onSignIn={signInWithGoogle}
           onSignOut={signOut}
           onSelectPastScan={loadPastScan}
+          onAddCredits={() => setIsCreditsModalOpen(true)}
         />
 
         <section className="flex min-w-0 flex-1 flex-col gap-5">
@@ -252,11 +361,15 @@ export function AuditApp({
                     <p className="max-w-2xl text-sm text-orange-200">
                       Anonymous searches show a simulated loading state and locked preview only. Real results unlock after Google sign-in.
                     </p>
-                  ) : !isPaid ? (
+                  ) : creditsRemaining < 1 ? (
                     <p className="max-w-2xl text-sm text-orange-200">
-                      Signed-in users can load stored scans. Fresh Firecrawl scans are reserved for paid accounts.
+                      You are out of fresh scan credits. Stored scans still load for free.
                     </p>
-                  ) : null}
+                  ) : (
+                    <p className="max-w-2xl text-sm text-orange-200">
+                      You have {creditsRemaining} fresh scan {creditsRemaining === 1 ? "credit" : "credits"} ready.
+                    </p>
+                  )}
                 </div>
 
                 <form onSubmit={runScan} className="rounded-2xl border border-white/10 bg-black/25 p-2 shadow-inner shadow-black/30">
@@ -291,6 +404,14 @@ export function AuditApp({
           ) : null}
 
           {isAuditing ? <LoadingScorecard /> : null}
+          <PricingSection
+            user={user}
+            creditsRemaining={creditsRemaining}
+            onSignIn={signInWithGoogle}
+            onBuyCredits={buyCredits}
+            checkoutPackId={checkoutPackId}
+            onOpenCredits={() => setIsCreditsModalOpen(true)}
+          />
           {audit ? (
             <Results
               audit={audit}
@@ -302,12 +423,22 @@ export function AuditApp({
               isReportCached={isReportCached}
               isLockedPreview={isLockedPreview}
               user={user}
-              isPaid={isPaid}
+              canRescan={creditsRemaining > 0}
               onSignIn={signInWithGoogle}
+              onAddCredits={() => setIsCreditsModalOpen(true)}
             />
           ) : null}
         </section>
       </div>
+      <CreditsModal
+        open={isCreditsModalOpen}
+        user={user}
+        credits={accountCredits}
+        onClose={() => setIsCreditsModalOpen(false)}
+        onSignIn={signInWithGoogle}
+        onBuyCredits={buyCredits}
+        checkoutPackId={checkoutPackId}
+      />
     </main>
   );
 }
@@ -332,6 +463,7 @@ function Sidebar({
   onSignIn,
   onSignOut,
   onSelectPastScan,
+  onAddCredits,
 }: {
   user: CurrentUser | null;
   isPaid: boolean;
@@ -340,10 +472,11 @@ function Sidebar({
   onSignIn: () => void;
   onSignOut: () => void;
   onSelectPastScan: (url: string) => void;
+  onAddCredits: () => void;
 }) {
   const [pastScansOpen, setPastScansOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const creditsRemaining = Math.max(0, credits.limit - credits.used);
+  const creditsRemaining = Math.max(0, credits.granted - credits.used);
 
   return (
     <aside className="flex shrink-0 flex-col justify-between gap-6 rounded-3xl border border-white/10 bg-[#0f1115]/80 p-4 shadow-2xl shadow-black/30 backdrop-blur lg:sticky lg:top-5 lg:min-h-[16.5rem] lg:w-64 lg:self-start">
@@ -364,9 +497,13 @@ function Sidebar({
                 <span className="truncate">Credits</span>
               </span>
               <span className="shrink-0 text-xs text-orange-200">
-                {creditsRemaining}/{credits.limit}
+                {creditsRemaining}/{credits.granted}
               </span>
             </div>
+            <Button size="sm" onClick={onAddCredits} className="bg-orange-500 text-black hover:bg-orange-400">
+              <PackagePlus className="mr-2 h-4 w-4" />
+              {paymentsEnabled ? "Add credits" : "Request credits"}
+            </Button>
 
             <button
               type="button"
@@ -420,6 +557,13 @@ function Sidebar({
                   <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">{isPaid ? "Paid account" : "Free account"}</p>
+                <button
+                  type="button"
+                  onClick={onAddCredits}
+                  className="w-full rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2 text-left text-xs text-orange-100 transition hover:border-orange-500/40 hover:bg-orange-500/15"
+                >
+                  {creditsRemaining} credits left. {paymentsEnabled ? "Manage credits" : "Request more"}
+                </button>
                 <Button variant="outline" size="sm" onClick={onSignOut} className="w-full">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign out
@@ -475,6 +619,294 @@ function Sidebar({
         </p>
       </div>
     </aside>
+  );
+}
+
+function PricingSection({
+  user,
+  creditsRemaining,
+  onSignIn,
+  onBuyCredits,
+  checkoutPackId,
+  onOpenCredits,
+}: {
+  user: CurrentUser | null;
+  creditsRemaining: number;
+  onSignIn: () => void;
+  onBuyCredits: (packId: string) => void;
+  checkoutPackId: string | null;
+  onOpenCredits: () => void;
+}) {
+  if (!paymentsEnabled) {
+    return (
+      <Card className="border-white/10 bg-[#111317]/85 shadow-xl shadow-black/20">
+        <CardHeader>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <Badge className="mb-3 w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
+                Credits by request
+              </Badge>
+              <CardTitle className="text-2xl tracking-[-0.03em]">Need more scan credits?</CardTitle>
+              <CardDescription>
+                Paid checkout is paused while I finish the credit options. Email me your account and use case, and I will add more free credits.
+              </CardDescription>
+            </div>
+            {user ? (
+              <Button variant="outline" onClick={onOpenCredits} className="border-orange-500/30 text-orange-200">
+                <User className="mr-2 h-4 w-4" />
+                {creditsRemaining} credits left
+              </Button>
+            ) : (
+              <Button onClick={onSignIn} className="bg-orange-500 text-black hover:bg-orange-400">
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign in to request
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <RequestCreditsPanel user={user} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-white/10 bg-[#111317]/85 shadow-xl shadow-black/20">
+      <CardHeader>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <Badge className="mb-3 w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
+              Pay as you scan
+            </Badge>
+            <CardTitle className="text-2xl tracking-[-0.03em]">Add scan credits when you need them</CardTitle>
+            <CardDescription>
+              Free accounts start with 1 fresh scan. Stored scans never consume credits.
+            </CardDescription>
+          </div>
+          {user ? (
+            <Button variant="outline" onClick={onOpenCredits} className="border-orange-500/30 text-orange-200">
+              <User className="mr-2 h-4 w-4" />
+              {creditsRemaining} credits left
+            </Button>
+          ) : (
+            <Button onClick={onSignIn} className="bg-orange-500 text-black hover:bg-orange-400">
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign in to buy
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-4 lg:grid-cols-3">
+        {creditPacks.map((pack) => (
+          <CreditPackCard
+            key={pack.id}
+            pack={pack}
+            onBuyCredits={onBuyCredits}
+            checkoutPackId={checkoutPackId}
+            disabled={!user}
+          />
+        ))}
+        <Card className="border-white/10 bg-black/20">
+          <CardHeader>
+            <div className="mb-2 grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/[0.04]">
+              <Mail className="h-5 w-5 text-orange-300" />
+            </div>
+            <CardTitle>Custom</CardTitle>
+            <CardDescription>Need a bigger batch or want a manual arrangement?</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="w-full border-orange-500/30 text-orange-200">
+              <a href={`mailto:${customCreditsEmail}?subject=Custom DocScanner credits`}>
+                Contact juampi <ArrowRight className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RequestCreditsPanel({ user }: { user: CurrentUser | null }) {
+  return (
+    <div className="grid gap-4 rounded-2xl border border-orange-500/20 bg-orange-500/[0.06] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div className="flex gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-orange-500/25 bg-orange-500/10">
+          <Mail className="h-5 w-5 text-orange-300" />
+        </div>
+        <div className="space-y-1">
+          <p className="font-medium">Request more free credits</p>
+          <p className="text-sm text-muted-foreground">
+            Include your account email and what you are scanning so I can add the right amount manually.
+          </p>
+        </div>
+      </div>
+      <Button asChild className="w-full justify-center bg-orange-500 text-black hover:bg-orange-400 sm:w-auto">
+        <a href={buildCreditRequestHref(user)}>
+          Email juampi
+          <ArrowRight className="h-4 w-4" />
+        </a>
+      </Button>
+    </div>
+  );
+}
+
+function CreditPackCard({
+  pack,
+  onBuyCredits,
+  checkoutPackId,
+  disabled,
+}: {
+  pack: (typeof creditPacks)[number];
+  onBuyCredits: (packId: string) => void;
+  checkoutPackId: string | null;
+  disabled?: boolean;
+}) {
+  const isLoading = checkoutPackId === pack.id;
+
+  return (
+    <Card className={`relative h-full overflow-hidden bg-black/20 ${pack.featured ? "border-orange-500/35" : "border-white/10"}`}>
+      {pack.featured ? (
+        <div className="absolute right-4 top-4 rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-xs text-orange-200">
+          Best value
+        </div>
+      ) : null}
+      <CardHeader>
+        <div className="mb-2 grid h-10 w-10 place-items-center rounded-2xl border border-orange-500/25 bg-orange-500/10">
+          <CreditCard className="h-5 w-5 text-orange-300" />
+        </div>
+        <CardTitle>{pack.name}</CardTitle>
+        <CardDescription className="min-h-10">{pack.description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <p className="text-3xl font-semibold tracking-[-0.04em]">{pack.price}</p>
+          <p className="text-sm text-muted-foreground">{pack.credits} fresh scan credits</p>
+        </div>
+        <Button
+          onClick={() => onBuyCredits(pack.id)}
+          disabled={disabled || Boolean(checkoutPackId)}
+          className="w-full justify-center bg-orange-500 text-black hover:bg-orange-400"
+        >
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackagePlus className="h-4 w-4" />}
+          {disabled ? "Sign in first" : "Buy credits"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CreditsModal({
+  open,
+  user,
+  credits,
+  onClose,
+  onSignIn,
+  onBuyCredits,
+  checkoutPackId,
+}: {
+  open: boolean;
+  user: CurrentUser | null;
+  credits: AccountCredits;
+  onClose: () => void;
+  onSignIn: () => void;
+  onBuyCredits: (packId: string) => void;
+  checkoutPackId: string | null;
+}) {
+  if (!open) return null;
+
+  const creditsRemaining = Math.max(0, credits.granted - credits.used);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-md sm:py-10">
+      <Card className="relative w-full max-w-3xl border-orange-500/25 bg-[#111317] shadow-2xl shadow-black/50">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/[0.03] p-2 text-muted-foreground transition hover:text-foreground"
+          aria-label="Close credits modal"
+        >
+          <XCircle className="h-4 w-4" />
+        </button>
+        <CardHeader className="pr-14">
+          <Badge className="mb-3 w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
+            Account credits
+          </Badge>
+          <CardTitle className="text-3xl tracking-[-0.04em]">Your scan balance</CardTitle>
+          <CardDescription>
+            {paymentsEnabled
+              ? "Add credits with Lemon Squeezy. Card details stay with Lemon Squeezy, not DocScanner."
+              : "Paid checkout is paused while I finish credit options. Request more credits by email for now."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{user?.name ?? "Not signed in"}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {user?.email ?? (paymentsEnabled ? "Sign in with Google to buy credits." : "Sign in with Google to request credits.")}
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <CreditStat label="Left" value={creditsRemaining} />
+              <CreditStat label="Used" value={credits.used} />
+              <CreditStat label="Total" value={credits.granted} />
+            </div>
+          </div>
+
+          {!user ? (
+            <Button onClick={onSignIn} className="w-full justify-center bg-orange-500 text-black hover:bg-orange-400">
+              <LogIn className="h-4 w-4" />
+              Sign in with Google
+            </Button>
+          ) : null}
+
+          {paymentsEnabled ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                {creditPacks.map((pack) => (
+                  <CreditPackCard
+                    key={pack.id}
+                    pack={pack}
+                    onBuyCredits={onBuyCredits}
+                    checkoutPackId={checkoutPackId}
+                    disabled={!user}
+                  />
+                ))}
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-center sm:text-left">
+                    <p className="font-medium">Need a custom credit bundle?</p>
+                    <p className="text-sm text-muted-foreground">
+                      Email me your account and use case and I will give more free credits.
+                    </p>
+                  </div>
+                  <Button asChild variant="outline" className="w-full justify-center border-orange-500/30 text-orange-200 sm:w-auto">
+                    <a href={`mailto:${customCreditsEmail}?subject=Custom DocScanner credits`}>
+                      {customCreditsEmail}
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <RequestCreditsPanel user={user} />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function CreditStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+      <p className="font-mono text-lg text-orange-200">{value}</p>
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+    </div>
   );
 }
 
@@ -565,8 +997,9 @@ function Results({
   isReportCached,
   isLockedPreview,
   user,
-  isPaid,
+  canRescan,
   onSignIn,
+  onAddCredits,
 }: {
   audit: AuditResult;
   onGenerateReport: () => void;
@@ -577,8 +1010,9 @@ function Results({
   isReportCached: boolean;
   isLockedPreview: boolean;
   user: CurrentUser | null;
-  isPaid: boolean;
+  canRescan: boolean;
   onSignIn: () => void;
+  onAddCredits: () => void;
 }) {
   const checks = useMemo(() => audit.categories.flatMap((category) => category.checks), [audit]);
   const failingChecks = checks.filter((check) => check.status !== "pass");
@@ -644,10 +1078,16 @@ function Results({
               <FileText className="mr-2 h-4 w-4" />
               Generate remediation package
             </Button>
-            {isPaid ? (
+            {user ? (
               <Button variant="outline" onClick={onRescan} className="w-full">
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Run paid rescan
+                {canRescan ? "Run fresh rescan" : paymentsEnabled ? "Add credits to rescan" : "Request credits to rescan"}
+              </Button>
+            ) : null}
+            {user && !canRescan ? (
+              <Button variant="outline" onClick={onAddCredits} className="w-full border-orange-500/30 text-orange-200">
+                <PackagePlus className="mr-2 h-4 w-4" />
+                {paymentsEnabled ? "Buy scan credits" : "Request more credits"}
               </Button>
             ) : null}
           </CardContent>
@@ -748,7 +1188,7 @@ function LockedPreviewOverlay({ onSignIn }: { onSignIn: () => void }) {
           <div>
             <p className="font-medium">Sign in to unlock the stored scan</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              This preview did not call Firecrawl. Google sign-in unlocks stored results, and paid users can trigger fresh scans.
+              This preview did not call Firecrawl. Google sign-in unlocks stored results, and signed-in accounts can trigger fresh scans when credits are available.
             </p>
           </div>
           <Button onClick={onSignIn} className="bg-orange-500 text-black hover:bg-orange-400">
@@ -825,8 +1265,8 @@ function IssueList({ checks }: { checks: AuditCheck[] }) {
       </CardHeader>
       <CardContent className="space-y-3">
         {checks.length ? (
-          checks.slice(0, 10).map((check) => (
-            <div key={check.id} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-orange-500/25">
+          checks.slice(0, 10).map((check, index) => (
+            <div key={`${check.id}-${index}`} className="rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:border-orange-500/25">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
