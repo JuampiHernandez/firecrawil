@@ -43,6 +43,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AuditApiResponse, AuditCategory, AuditCheck, AuditReport, AuditResult, CheckStatus, ReportApiResponse } from "@/lib/audit/types";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 const creditPacks = [
   {
@@ -322,11 +323,13 @@ export function AuditApp({
     await runScan(undefined, scanUrl);
   }
 
+  const displayName = getDisplayName(user);
+
   return (
-    <main className="min-h-screen overflow-hidden bg-background text-foreground">
+    <main className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_2%,rgba(255,106,0,0.2),transparent_28rem),radial-gradient(circle_at_86%_10%,rgba(255,176,32,0.14),transparent_24rem),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_18rem)]" />
       <div className="pointer-events-none fixed right-8 top-6 hidden h-72 w-72 rounded-full border border-white/5 bg-[radial-gradient(circle,rgba(255,106,0,0.38)_0_3%,transparent_4%),repeating-radial-gradient(circle,rgba(255,255,255,0.12)_0_1px,transparent_1px_48px)] lg:block" />
-      <div className="relative mx-auto flex w-full max-w-[1500px] flex-col gap-5 px-4 py-4 sm:px-6 lg:min-h-screen lg:flex-row lg:p-5">
+      <div className="relative mx-auto flex w-full max-w-[1500px] flex-col gap-3 px-3 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:min-h-screen lg:flex-row lg:p-5">
         <Sidebar
           user={user}
           isPaid={isPaid}
@@ -339,59 +342,62 @@ export function AuditApp({
         />
 
         <section className="flex min-w-0 flex-1 flex-col gap-5">
-          <Card className="border-white/10 bg-[#111317]/85 shadow-2xl shadow-black/30 backdrop-blur">
-            <CardContent className="grid gap-6 p-5 sm:p-6 xl:grid-cols-[0.9fr_1.1fr] xl:p-7">
-              <div className="space-y-6">
+          <Card className="rounded-2xl border-white/10 bg-[#111317]/85 shadow-2xl shadow-black/30 backdrop-blur sm:rounded-3xl">
+            <CardContent className="grid gap-5 p-4 sm:gap-6 sm:p-6 xl:grid-cols-[0.9fr_1.1fr] xl:p-7">
+              <div className="space-y-5 sm:space-y-6">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className="w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
-                    {user ? "Agent-ready docs intelligence" : "Preview without scan credits"}
+                    {user ? "Ready to scan" : "Sign up to try DocScanner"}
                   </Badge>
-                  <Badge variant="outline" className="border-white/10 bg-white/[0.03] text-muted-foreground">
+                  <Badge variant="outline" className="hidden border-white/10 bg-white/[0.03] text-muted-foreground sm:inline-flex">
                     Scan. Score. Improve.
                   </Badge>
                 </div>
-                <div className="max-w-3xl space-y-4">
-                  <h1 className="text-4xl font-semibold tracking-[-0.04em] text-balance sm:text-5xl lg:text-6xl">
+                <div className="max-w-3xl space-y-3 sm:space-y-4">
+                  <h1 className="text-[2.55rem] font-semibold leading-[0.95] tracking-[-0.055em] text-balance sm:text-5xl lg:text-6xl">
                     The Lighthouse for <span className="text-orange-400">Developer Docs.</span>
                   </h1>
-                  <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+                  <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-lg sm:leading-7">
                     Find missing specs, stale examples, and agent blockers before users hit them.
                   </p>
-                  {!user ? (
+                  {!user ? null : creditsRemaining < 1 ? (
                     <p className="max-w-2xl text-sm text-orange-200">
-                      Anonymous searches show a simulated loading state and locked preview only. Real results unlock after Google sign-in.
-                    </p>
-                  ) : creditsRemaining < 1 ? (
-                    <p className="max-w-2xl text-sm text-orange-200">
-                      You are out of fresh scan credits. Stored scans still load for free.
+                      Signed in as {displayName}. You are out of fresh scan credits. Stored scans still load for free.
                     </p>
                   ) : (
                     <p className="max-w-2xl text-sm text-orange-200">
-                      You have {creditsRemaining} fresh scan {creditsRemaining === 1 ? "credit" : "credits"} ready.
+                      Signed in as {displayName}. You have {creditsRemaining} fresh scan {creditsRemaining === 1 ? "credit" : "credits"} ready.
                     </p>
                   )}
                 </div>
 
-                <form onSubmit={runScan} className="rounded-2xl border border-white/10 bg-black/25 p-2 shadow-inner shadow-black/30">
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <div className="relative flex-1">
-                      <Globe2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        value={url}
-                        onChange={(event) => setUrl(event.target.value)}
-                        placeholder="https://docs.example.com"
-                        className="h-12 border-white/10 bg-[#0b0c0e]/80 pl-9 font-mono text-sm"
-                      />
+                {user ? (
+                  <form onSubmit={runScan} className="rounded-2xl border border-white/10 bg-black/25 p-2 shadow-inner shadow-black/30">
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <div className="relative flex-1">
+                        <Globe2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={url}
+                          onChange={(event) => setUrl(event.target.value)}
+                          placeholder="https://docs.example.com"
+                          className="h-11 border-white/10 bg-[#0b0c0e]/80 pl-9 font-mono text-sm sm:h-12"
+                        />
+                      </div>
+                      <Button type="submit" size="lg" disabled={isAuditing} className="h-11 bg-orange-500 px-5 text-black hover:bg-orange-400 sm:h-12">
+                        {isAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Radar className="mr-2 h-4 w-4" />}
+                        Run scan
+                      </Button>
                     </div>
-                    <Button type="submit" size="lg" disabled={isAuditing} className="h-12 bg-orange-500 px-5 text-black hover:bg-orange-400">
-                      {isAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Radar className="mr-2 h-4 w-4" />}
-                      {user ? "Run scan" : "Preview score"}
-                    </Button>
-                  </div>
-                </form>
+                  </form>
+                ) : (
+                  <Button onClick={signInWithGoogle} size="lg" className="h-12 w-full rounded-xl bg-orange-500 text-black hover:bg-orange-400 sm:w-fit sm:px-6">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Sign up to try the app
+                  </Button>
+                )}
               </div>
 
-              <ScanPanel audit={audit} isAuditing={isAuditing} />
+              <ScanPanel audit={audit} isAuditing={isAuditing} className={user ? "" : "hidden xl:block"} />
             </CardContent>
           </Card>
 
@@ -404,14 +410,16 @@ export function AuditApp({
           ) : null}
 
           {isAuditing ? <LoadingScorecard /> : null}
-          <PricingSection
-            user={user}
-            creditsRemaining={creditsRemaining}
-            onSignIn={signInWithGoogle}
-            onBuyCredits={buyCredits}
-            checkoutPackId={checkoutPackId}
-            onOpenCredits={() => setIsCreditsModalOpen(true)}
-          />
+          {user ? (
+            <PricingSection
+              user={user}
+              creditsRemaining={creditsRemaining}
+              onSignIn={signInWithGoogle}
+              onBuyCredits={buyCredits}
+              checkoutPackId={checkoutPackId}
+              onOpenCredits={() => setIsCreditsModalOpen(true)}
+            />
+          ) : null}
           {audit ? (
             <Results
               audit={audit}
@@ -455,6 +463,11 @@ function formatScanDate(value: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(value));
 }
 
+function getDisplayName(user: CurrentUser | null) {
+  if (!user) return "Guest";
+  return user.name?.trim() || user.email.split("@")[0] || "Signed in";
+}
+
 function Sidebar({
   user,
   isPaid,
@@ -477,20 +490,58 @@ function Sidebar({
   const [pastScansOpen, setPastScansOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const creditsRemaining = Math.max(0, credits.granted - credits.used);
+  const displayName = getDisplayName(user);
 
   return (
-    <aside className="flex shrink-0 flex-col justify-between gap-6 rounded-3xl border border-white/10 bg-[#0f1115]/80 p-4 shadow-2xl shadow-black/30 backdrop-blur lg:sticky lg:top-5 lg:min-h-[16.5rem] lg:w-64 lg:self-start">
+    <>
+    <aside className="flex shrink-0 items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0f1115]/88 p-3 shadow-2xl shadow-black/25 backdrop-blur lg:hidden">
+      <div className="flex min-w-0 items-center gap-3">
+        <DocScannerMark className="h-9 w-9 rounded-xl" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold tracking-[-0.03em]">DocScanner</p>
+          {user ? (
+            <p className="truncate text-xs text-orange-200">{displayName}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Create a free account</p>
+          )}
+        </div>
+      </div>
+      {user ? (
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onAddCredits}
+            className="rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-1.5 text-xs text-orange-100"
+          >
+            {creditsRemaining}/{credits.granted} credits
+          </button>
+          <Button variant="outline" size="sm" onClick={onSignOut} aria-label="Sign out">
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <Button size="sm" onClick={onSignIn} className="shrink-0 bg-orange-500 text-black hover:bg-orange-400">
+          Sign up
+        </Button>
+      )}
+    </aside>
+
+    <aside className="hidden shrink-0 flex-col justify-between gap-6 rounded-3xl border border-white/10 bg-[#0f1115]/80 p-4 shadow-2xl shadow-black/30 backdrop-blur lg:sticky lg:top-5 lg:flex lg:min-h-[16.5rem] lg:w-64 lg:self-start">
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <DocScannerMark className="h-11 w-11" />
           <div>
             <p className="text-xl font-semibold tracking-[-0.03em]">DocScanner</p>
-            <p className="text-xs text-orange-200">Scan. Score. Improve.</p>
+            <p className="text-xs text-orange-200">{user ? displayName : "Sign up to try it"}</p>
           </div>
         </div>
 
         {user ? (
           <nav className="grid gap-1">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+              <p className="truncate text-sm font-medium">{displayName}</p>
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">{user.email}</p>
+            </div>
             <div className="flex items-center justify-between gap-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2.5 text-sm text-orange-100">
               <span className="flex min-w-0 items-center gap-3">
                 <Gauge className="h-4 w-4 shrink-0" />
@@ -572,37 +623,20 @@ function Sidebar({
             ) : null}
           </nav>
         ) : (
-          <nav className="grid gap-1">
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2.5 text-sm text-orange-100">
-              <span className="flex items-center gap-3">
-                <Gauge className="h-4 w-4" />
-                Credits
-              </span>
-              <span className="text-xs text-orange-200">0/0</span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-muted-foreground">
-              <span className="flex items-center gap-3">
-                <History className="h-4 w-4" />
-                Past scans
-              </span>
-              <Lock className="h-3.5 w-3.5" />
-            </div>
-            <div className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-muted-foreground">
-              <span className="flex items-center gap-3">
-                <User className="h-4 w-4" />
-                Profile
-              </span>
-              <Lock className="h-3.5 w-3.5" />
-            </div>
-          </nav>
+          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/[0.07] p-3">
+            <p className="text-sm font-medium text-orange-100">Try a real docs scan</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Sign up with Google to unlock scan credits, saved results, and reports.
+            </p>
+          </div>
         )}
       </div>
 
       <div className="space-y-3">
         {!user ? (
-          <Button variant="outline" size="sm" onClick={onSignIn} className="w-full border-orange-500/30 text-orange-200">
+          <Button size="sm" onClick={onSignIn} className="w-full bg-orange-500 text-black hover:bg-orange-400">
             <LogIn className="mr-2 h-4 w-4" />
-            Sign in with Google
+            Sign up to try the app
           </Button>
         ) : null}
 
@@ -619,6 +653,7 @@ function Sidebar({
         </p>
       </div>
     </aside>
+    </>
   );
 }
 
@@ -921,9 +956,9 @@ function DocScannerMark({ className = "h-10 w-10" }: { className?: string }) {
   );
 }
 
-function ScanPanel({ audit, isAuditing }: { audit: AuditResult | null; isAuditing: boolean }) {
+function ScanPanel({ audit, isAuditing, className }: { audit: AuditResult | null; isAuditing: boolean; className?: string }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0b0c0e]/70 p-5 shadow-inner shadow-black/30">
+    <div className={cn("relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0c0e]/70 p-4 shadow-inner shadow-black/30 sm:rounded-3xl sm:p-5", className)}>
       <div className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full border border-white/10 bg-[radial-gradient(circle,rgba(255,106,0,0.35)_0_4%,transparent_5%),repeating-radial-gradient(circle,rgba(255,255,255,0.1)_0_1px,transparent_1px_32px)]" />
       <div className="relative mb-5 flex items-center justify-between">
         <div>
@@ -936,7 +971,7 @@ function ScanPanel({ audit, isAuditing }: { audit: AuditResult | null; isAuditin
         {scanOutputs.map((output, index) => (
           <div
             key={output.title}
-            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-3.5"
+            className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-3 sm:rounded-2xl sm:py-3.5"
           >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-orange-500/25 bg-orange-500/10 text-xs text-orange-300">
               {isAuditing ? <span className="animate-pulse">{index + 1}</span> : <CheckCircle2 className="h-4 w-4" />}
@@ -949,7 +984,7 @@ function ScanPanel({ audit, isAuditing }: { audit: AuditResult | null; isAuditin
         ))}
       </div>
       {audit ? (
-        <div className="relative mt-5 grid grid-cols-3 gap-3">
+        <div className="relative mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
           <MiniMetric label="Links" value={audit.stats.discoveredUrls} icon={Search} />
           <MiniMetric label="Scanned" value={audit.stats.scannedPages} icon={FileText} />
           <MiniMetric label="Assets" value={audit.assets.length} icon={Sparkles} />
@@ -961,9 +996,9 @@ function ScanPanel({ audit, isAuditing }: { audit: AuditResult | null; isAuditin
 
 function MiniMetric({ label, value, icon: Icon }: { label: string; value: number; icon?: typeof Activity }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#111317]/80 p-3">
+    <div className="rounded-xl border border-white/10 bg-[#111317]/80 p-2.5 sm:rounded-2xl sm:p-3">
       {Icon ? <Icon className="mb-2 h-3.5 w-3.5 text-orange-300" /> : null}
-      <p className="font-mono text-lg">{value}</p>
+      <p className="font-mono text-base sm:text-lg">{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
     </div>
   );
@@ -1137,9 +1172,9 @@ function ScoreRing({ score }: { score: number }) {
   const offset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="relative grid h-44 w-44 place-items-center">
+    <div className="relative grid h-36 w-36 place-items-center sm:h-44 sm:w-44">
       <div className="absolute inset-3 rounded-full bg-[radial-gradient(circle,rgba(255,106,0,0.18),transparent_58%)]" />
-      <svg viewBox="0 0 176 176" className="h-44 w-44 -rotate-90">
+      <svg viewBox="0 0 176 176" className="h-36 w-36 -rotate-90 sm:h-44 sm:w-44">
         <circle cx="88" cy="88" r="54" stroke="currentColor" strokeWidth="10" fill="none" className="text-white/10" />
         <circle
           cx="88"
@@ -1155,7 +1190,7 @@ function ScoreRing({ score }: { score: number }) {
         />
       </svg>
       <div className="absolute text-center">
-        <p className="font-mono text-4xl font-semibold">{score}</p>
+        <p className="font-mono text-3xl font-semibold sm:text-4xl">{score}</p>
         <p className="text-xs text-muted-foreground">/ 100</p>
       </div>
     </div>

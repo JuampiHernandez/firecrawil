@@ -15,7 +15,19 @@ import {
   Target,
 } from "lucide-react";
 import Link from "next/link";
-import { AmbientLandingEffects, RotatingSignal } from "@/components/landing-effects";
+import {
+  AmbientLandingEffects,
+  AnimatedBar,
+  AnimatedNumber,
+  AnimatedScoreRing,
+  HoverLift,
+  PulseGlow,
+  Reveal,
+  RevealGroup,
+  RevealItem,
+  RotatingSignal,
+  Spotlight,
+} from "@/components/landing-effects";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -94,12 +106,12 @@ const pricing = [
 
 export default function LandingPage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#050607] text-foreground">
+    <main className="min-h-screen overflow-x-hidden bg-[#050607] text-foreground">
       <AmbientLandingEffects />
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_8%,rgba(255,106,0,0.18),transparent_28rem),radial-gradient(circle_at_76%_22%,rgba(255,106,0,0.12),transparent_26rem),linear-gradient(180deg,rgba(255,255,255,0.05),transparent_20rem)]" />
       <div className="pointer-events-none fixed inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-500/60 to-transparent" />
 
-      <div className="relative mx-auto flex w-full max-w-7xl flex-col px-5 py-5 sm:px-7 lg:px-8">
+      <div className="relative mx-auto flex w-full max-w-7xl flex-col px-4 py-4 sm:px-7 lg:px-8">
         <Header />
         <Hero />
         <ProblemSection />
@@ -117,10 +129,10 @@ export default function LandingPage() {
 
 function Header() {
   return (
-    <header className="sticky top-4 z-20 flex items-center justify-between rounded-2xl border border-white/10 bg-[#090a0c]/80 px-3 py-3 shadow-2xl shadow-black/30 backdrop-blur">
+    <header className="sticky top-3 z-20 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#090a0c]/80 px-3 py-3 shadow-2xl shadow-black/30 backdrop-blur sm:top-4">
       <Link href="/" className="flex items-center gap-3">
         <DocScannerMark />
-        <span className="text-base font-semibold tracking-[-0.03em]">DocScanner</span>
+        <span className="text-sm font-semibold tracking-[-0.03em] sm:text-base">DocScanner</span>
       </Link>
       <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
         <a href="#product" className="transition hover:text-foreground">
@@ -137,9 +149,14 @@ function Header() {
         <Button asChild variant="ghost" className="hidden text-muted-foreground sm:inline-flex">
           <Link href="/app">Sign in</Link>
         </Button>
-        <Button asChild className="bg-orange-500 text-black hover:bg-orange-400">
+        <Button
+          asChild
+          className="bg-orange-500 px-3 text-black transition-transform duration-200 hover:scale-[1.04] hover:bg-orange-400 active:scale-[0.97] sm:px-4"
+        >
           <Link href="/app">
-            Start free scan <ArrowRight className="ml-1 h-4 w-4" />
+            <span className="sm:hidden">Start</span>
+            <span className="hidden sm:inline">Start free scan</span>
+            <ArrowRight className="ml-1 h-4 w-4" />
           </Link>
         </Button>
       </div>
@@ -149,65 +166,80 @@ function Header() {
 
 function Hero() {
   return (
-    <section className="grid min-h-[calc(100vh-6rem)] items-center gap-10 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:py-20">
-      <div className="max-w-2xl space-y-7">
+    <Spotlight className="grid items-center gap-8 py-10 sm:py-14 lg:min-h-[calc(100vh-6rem)] lg:grid-cols-[0.9fr_1.1fr] lg:gap-10 lg:py-20">
+      <Reveal className="max-w-2xl space-y-6 sm:space-y-7" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           <Sparkles className="mr-1 h-3.5 w-3.5" />
           Developer docs lighthouse
         </Badge>
         <div className="space-y-5">
-          <h1 className="text-5xl font-semibold leading-[0.95] tracking-[-0.055em] text-balance sm:text-6xl lg:text-7xl">
+          <h1 className="text-[3rem] font-semibold leading-[0.92] tracking-[-0.06em] text-balance sm:text-6xl lg:text-7xl">
             The Lighthouse for <span className="text-orange-400">Developer Docs.</span>
           </h1>
-          <p className="max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
+          <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-lg sm:leading-7">
             Find broken docs paths, agent blockers, stale examples, and missing specs in one scan.
           </p>
           <RotatingSignal />
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button asChild size="lg" className="h-12 rounded-xl bg-orange-500 px-6 text-black hover:bg-orange-400">
+          <Button
+            asChild
+            size="lg"
+            className="h-12 rounded-xl bg-orange-500 px-6 text-black shadow-lg shadow-orange-500/20 transition-transform duration-200 hover:scale-[1.03] hover:bg-orange-400 active:scale-[0.97]"
+          >
             <Link href="/app">
               Scan your docs <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
-          <Button asChild size="lg" variant="outline" className="h-12 rounded-xl border-white/10 bg-white/[0.03] px-6">
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className="h-12 rounded-xl border-white/10 bg-white/[0.03] px-6 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97]"
+          >
             <Link href="/app">
               View sample report <FileText className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>
-        <div className="grid max-w-xl grid-cols-3 gap-4 border-y border-white/10 py-5 text-sm">
-          <Metric value="2,847" label="scans run" icon={Globe2} />
-          <Metric value="1.21M+" label="links analyzed" icon={Radar} />
-          <Metric value="8.63K+" label="reports generated" icon={FileText} />
+        <div className="grid max-w-xl grid-cols-3 justify-items-center gap-2 border-y border-white/10 py-4 text-sm sm:justify-items-start sm:gap-4 sm:py-5">
+          <Metric value={2847} label="scans run" icon={Globe2} />
+          <Metric value={1.21} decimals={2} suffix="M+" label="links analyzed" icon={Radar} />
+          <Metric value={8.63} decimals={2} suffix="K+" label="reports generated" icon={FileText} />
         </div>
-      </div>
+      </Reveal>
 
-      <ProductMockup />
-    </section>
+      <Reveal y={24} delay={0.15}>
+        <ProductMockup />
+      </Reveal>
+    </Spotlight>
   );
 }
 
 function ProductMockup() {
   return (
-    <div className="relative" id="product">
-      <div className="absolute -inset-6 rounded-[2rem] bg-orange-500/15 blur-3xl" />
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d10]/95 p-4 shadow-2xl shadow-orange-950/30">
+    <HoverLift lift={-4} className="relative min-w-0">
+      <div id="product">
+      <PulseGlow className="absolute -inset-4 rounded-[2rem] bg-orange-500/15 blur-3xl sm:-inset-6" />
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0d10]/95 p-3 shadow-2xl shadow-orange-950/30 sm:rounded-3xl sm:p-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <Globe2 className="h-4 w-4" />
-            docs.twilio.com
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-300">Fresh scan</span>
+            <span className="truncate">docs.twilio.com</span>
+            <span className="hidden items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-300 sm:inline-flex">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+              Fresh scan
+            </span>
           </div>
-          <span>Scanned 2m ago</span>
+          <span className="shrink-0">2m ago</span>
         </div>
         <div className="grid gap-4 pt-4 lg:grid-cols-[0.36fr_0.64fr]">
           <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
             <p className="text-sm font-medium">Overall Score</p>
             <div className="mt-5 grid place-items-center">
-              <ScoreRing score={69} />
+              <AnimatedScoreRing score={69} size={144} />
             </div>
-            <div className="mt-5 grid grid-cols-3 gap-2 border-t border-white/10 pt-4 text-center text-xs text-muted-foreground">
+            <div className="mt-5 grid grid-cols-3 gap-2 border-t border-white/10 pt-4 text-center text-[11px] text-muted-foreground sm:text-xs">
               <span>
                 <strong className="block text-base text-foreground">80</strong> Links
               </span>
@@ -222,21 +254,22 @@ function ProductMockup() {
           <div className="grid gap-4">
             <div className="grid gap-3 sm:grid-cols-3">
               {scoreCards.slice(0, 6).map(([label, score, status, Icon]) => (
-                <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <div
+                  key={label}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 transition-colors duration-300 hover:border-orange-500/30 hover:bg-white/[0.05]"
+                >
                   <div className="flex items-center justify-between gap-2 text-xs">
                     <span>{label}</span>
                     <Icon className="h-4 w-4 text-orange-300" />
                   </div>
                   <div className="mt-3 flex items-center gap-2">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full rounded-full bg-orange-500" style={{ width: `${score}%` }} />
-                    </div>
+                    <AnimatedBar value={score} />
                     <span className={status === "Pass" ? "text-emerald-300" : "text-orange-300"}>{score}</span>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-3 sm:p-4">
               <p className="mb-3 text-sm font-medium">Top issues</p>
               <div className="grid gap-2">
                 {issueRows.slice(0, 3).map(([issue, status, evidence]) => (
@@ -253,7 +286,7 @@ function ProductMockup() {
             </div>
           </div>
         </div>
-        <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-2 border-t border-white/10 pt-4 sm:grid-cols-3 sm:gap-3">
           {["Crawl Complete", "Assets Found", "Report Ready"].map((label) => (
             <div key={label} className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-3 py-2 text-xs text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-emerald-300" />
@@ -262,14 +295,15 @@ function ProductMockup() {
           ))}
         </div>
       </div>
-    </div>
+      </div>
+    </HoverLift>
   );
 }
 
 function ProblemSection() {
   return (
     <section className="grid gap-10 py-20 lg:grid-cols-[0.9fr_1.1fr]">
-      <div className="space-y-5">
+      <Reveal className="space-y-5" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Why DocScanner
         </Badge>
@@ -280,12 +314,16 @@ function ProblemSection() {
           Most docs were written for humans, not agents. Fragmented references, missing schemas, no playgrounds,
           and weak onboarding create friction that slows teams down and breaks trust.
         </p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      </Reveal>
+      <RevealGroup className="grid gap-4 sm:grid-cols-2">
         {issueCards.map((card) => (
-          <FeatureCard key={card.title} {...card} />
+          <RevealItem key={card.title}>
+            <HoverLift className="h-full">
+              <FeatureCard {...card} />
+            </HoverLift>
+          </RevealItem>
         ))}
-      </div>
+      </RevealGroup>
     </section>
   );
 }
@@ -293,7 +331,7 @@ function ProblemSection() {
 function IssuesSection() {
   return (
     <section className="grid gap-10 py-20 lg:grid-cols-[0.75fr_1.25fr]">
-      <div className="space-y-6">
+      <Reveal className="space-y-6" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Issues and checks
         </Badge>
@@ -312,8 +350,8 @@ function IssuesSection() {
             </span>
           ))}
         </div>
-      </div>
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d10]/90 p-4 shadow-2xl shadow-orange-950/20">
+      </Reveal>
+      <Reveal delay={0.1} y={20} className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d10]/90 p-4 shadow-2xl shadow-orange-950/20">
         <div className="mb-4 flex flex-wrap gap-2 text-xs">
           {["All issues 14", "Fail 7", "Warn 5", "Pass 2"].map((tab) => (
             <span key={tab} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-muted-foreground">
@@ -321,17 +359,20 @@ function IssuesSection() {
             </span>
           ))}
         </div>
-        <div className="grid gap-2">
+        <RevealGroup className="grid gap-2" stagger={0.06}>
           {issueRows.map(([issue, status, evidence, impact]) => (
-            <div key={issue} className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-sm md:grid-cols-[1.2fr_0.5fr_1.4fr_0.45fr]">
+            <RevealItem
+              key={issue}
+              className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 text-sm transition-colors duration-300 hover:border-orange-500/25 hover:bg-white/[0.045] md:grid-cols-[1.2fr_0.5fr_1.4fr_0.45fr]"
+            >
               <span>{issue}</span>
               <span className={status === "Pass" ? "text-emerald-300" : status === "Warn" ? "text-orange-300" : "text-red-400"}>{status}</span>
               <span className="text-muted-foreground">{evidence}</span>
               <span className="text-right text-orange-200">{impact}</span>
-            </div>
+            </RevealItem>
           ))}
-        </div>
-      </div>
+        </RevealGroup>
+      </Reveal>
     </section>
   );
 }
@@ -339,7 +380,7 @@ function IssuesSection() {
 function ScoringSection() {
   return (
     <section className="grid gap-10 py-20 lg:grid-cols-[0.75fr_1.25fr]">
-      <div className="space-y-6">
+      <Reveal className="space-y-6" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Scoring framework
         </Badge>
@@ -350,25 +391,29 @@ function ScoringSection() {
           DocScanner evaluates what drives agent adoption and developer trust, then rolls it into one actionable score.
         </p>
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-          <ScoreRing score={69} />
+          <AnimatedScoreRing score={69} />
           <p className="mt-5 text-sm text-muted-foreground">Needs improvement. Address high-impact gaps to improve agent readiness and discoverability.</p>
         </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      </Reveal>
+      <RevealGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {scoreCards.map(([label, score, status, Icon]) => (
-          <div key={label} className="rounded-3xl border border-white/10 bg-[#0b0d10]/90 p-5">
-            <div className="flex items-center justify-between">
-              <Icon className="h-5 w-5 text-orange-300" />
-              <span className={status === "Pass" ? "text-emerald-300" : status === "Fail" ? "text-red-400" : "text-orange-300"}>{score}</span>
-            </div>
-            <p className="mt-4 text-sm font-medium">{label}</p>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-orange-500" style={{ width: `${score}%` }} />
-            </div>
-            <p className="mt-6 w-fit rounded-full bg-white/[0.04] px-3 py-1 text-xs text-muted-foreground">{status}</p>
-          </div>
+          <RevealItem key={label}>
+            <HoverLift className="h-full">
+              <div className="h-full rounded-3xl border border-white/10 bg-[#0b0d10]/90 p-5 transition-colors duration-300 hover:border-orange-500/30">
+                <div className="flex items-center justify-between">
+                  <Icon className="h-5 w-5 text-orange-300" />
+                  <span className={status === "Pass" ? "text-emerald-300" : status === "Fail" ? "text-red-400" : "text-orange-300"}>
+                    <AnimatedNumber value={score} />
+                  </span>
+                </div>
+                <p className="mt-4 text-sm font-medium">{label}</p>
+                <AnimatedBar value={score} className="mt-4 h-2" />
+                <p className="mt-6 w-fit rounded-full bg-white/[0.04] px-3 py-1 text-xs text-muted-foreground">{status}</p>
+              </div>
+            </HoverLift>
+          </RevealItem>
         ))}
-      </div>
+      </RevealGroup>
     </section>
   );
 }
@@ -376,7 +421,7 @@ function ScoringSection() {
 function ReportSection() {
   return (
     <section className="grid gap-10 py-20 lg:grid-cols-[0.75fr_1.25fr]">
-      <div className="space-y-6">
+      <Reveal className="space-y-6" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Remediation reports
         </Badge>
@@ -386,14 +431,14 @@ function ReportSection() {
         <p className="text-muted-foreground">
           Get prioritized fixes, references, code examples, and a machine-readable remediation artifact for docs teams and agents.
         </p>
-      </div>
-      <div className="grid overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d10]/90 shadow-2xl shadow-orange-950/20 lg:grid-cols-2">
+      </Reveal>
+      <Reveal delay={0.1} y={20} className="grid overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d10]/90 shadow-2xl shadow-orange-950/20 lg:grid-cols-2">
         <div className="border-b border-white/10 p-6 lg:border-b-0 lg:border-r">
           <p className="mb-5 text-sm font-medium">Human-readable report</p>
-          <ScoreRing score={69} />
+          <AnimatedScoreRing score={69} />
           <div className="mt-6 grid gap-3">
             {["Expose OpenAPI or schema", "Include cURL examples", "Link to playground or sandbox"].map((item) => (
-              <div key={item} className="rounded-xl bg-white/[0.03] px-3 py-2 text-sm">
+              <div key={item} className="rounded-xl bg-white/[0.03] px-3 py-2 text-sm transition-colors duration-300 hover:bg-white/[0.06]">
                 {item}
               </div>
             ))}
@@ -413,7 +458,7 @@ acceptance:
   - /openapi.json is reachable
   - auth and errors are documented`}
         </pre>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -421,26 +466,32 @@ acceptance:
 function HowItWorksSection() {
   return (
     <section id="how-it-works" className="py-20 text-center">
-      <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
-        How it works
-      </Badge>
-      <h2 className="mx-auto mt-5 max-w-3xl text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">
-        Scan. Score. Fix. <span className="text-orange-400">Repeat.</span>
-      </h2>
-      <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-        DocScanner turns your docs into a developer-ready system in four simple steps.
-      </p>
-      <div className="mt-10 grid gap-4 text-left md:grid-cols-2 lg:grid-cols-4">
+      <Reveal y={16}>
+        <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
+          How it works
+        </Badge>
+        <h2 className="mx-auto mt-5 max-w-3xl text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">
+          Scan. Score. Fix. <span className="text-orange-400">Repeat.</span>
+        </h2>
+        <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+          DocScanner turns your docs into a developer-ready system in four simple steps.
+        </p>
+      </Reveal>
+      <RevealGroup className="mt-10 grid gap-4 text-left md:grid-cols-2 lg:grid-cols-4">
         {steps.map(([title, text], index) => (
-          <div key={title} className="rounded-3xl border border-white/10 bg-[#0b0d10]/90 p-5">
-            <span className="grid h-8 w-8 place-items-center rounded-full border border-orange-500/30 bg-orange-500/10 text-sm text-orange-200">
-              {index + 1}
-            </span>
-            <p className="mt-16 font-medium">{title}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{text}</p>
-          </div>
+          <RevealItem key={title}>
+            <HoverLift className="h-full">
+              <div className="h-full rounded-3xl border border-white/10 bg-[#0b0d10]/90 p-5 transition-colors duration-300 hover:border-orange-500/30">
+                <span className="grid h-8 w-8 place-items-center rounded-full border border-orange-500/30 bg-orange-500/10 text-sm text-orange-200">
+                  {index + 1}
+                </span>
+                <p className="mt-16 font-medium">{title}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+              </div>
+            </HoverLift>
+          </RevealItem>
         ))}
-      </div>
+      </RevealGroup>
     </section>
   );
 }
@@ -448,7 +499,7 @@ function HowItWorksSection() {
 function PricingSection() {
   return (
     <section id="pricing" className="py-20">
-      <div className="mx-auto max-w-3xl text-center">
+      <Reveal className="mx-auto max-w-3xl text-center" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Transparent pricing
         </Badge>
@@ -456,59 +507,73 @@ function PricingSection() {
           Simple pricing for teams improving <span className="text-orange-400">developer docs.</span>
         </h2>
         <p className="mt-4 text-muted-foreground">Start free, scale when you are ready. All plans include core scanning and reports your team can trust.</p>
-      </div>
-      <div className="mt-10 grid gap-5 lg:grid-cols-3">
+      </Reveal>
+      <RevealGroup className="mt-10 grid gap-5 lg:grid-cols-3">
         {pricing.map((plan) => (
-          <div
-            key={plan.name}
-            className={`rounded-3xl border p-6 ${plan.featured ? "border-orange-500/40 bg-orange-500/[0.06] shadow-2xl shadow-orange-950/30" : "border-white/10 bg-[#0b0d10]/90"}`}
-          >
-            {plan.featured ? <Badge className="mb-4 bg-orange-500/15 text-orange-200 hover:bg-orange-500/15">Most popular</Badge> : null}
-            <p className="text-lg font-medium">{plan.name}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-            <p className="mt-6 text-4xl font-semibold tracking-[-0.05em]">
-              {plan.price}
-              {plan.price !== "Custom" ? <span className="text-base text-muted-foreground"> /mo</span> : null}
-            </p>
-            <Button asChild className={`mt-6 w-full ${plan.featured ? "bg-orange-500 text-black hover:bg-orange-400" : ""}`} variant={plan.featured ? "default" : "outline"}>
-              <Link href="/app">
-                {plan.cta} <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <div className="mt-6 grid gap-3 border-t border-white/10 pt-6">
-              {plan.features.map((feature) => (
-                <span key={feature} className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <CheckCircle2 className="h-4 w-4 text-orange-300" />
-                  {feature}
-                </span>
-              ))}
-            </div>
-          </div>
+          <RevealItem key={plan.name}>
+            <HoverLift lift={-8} className="h-full">
+              <div
+                className={`h-full rounded-3xl border p-6 transition-shadow duration-300 ${plan.featured ? "border-orange-500/40 bg-orange-500/[0.06] shadow-2xl shadow-orange-950/30 hover:shadow-orange-900/40" : "border-white/10 bg-[#0b0d10]/90 hover:border-orange-500/20"}`}
+              >
+                {plan.featured ? <Badge className="mb-4 bg-orange-500/15 text-orange-200 hover:bg-orange-500/15">Most popular</Badge> : null}
+                <p className="text-lg font-medium">{plan.name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
+                <p className="mt-6 text-4xl font-semibold tracking-[-0.05em]">
+                  {plan.price}
+                  {plan.price !== "Custom" ? <span className="text-base text-muted-foreground"> /mo</span> : null}
+                </p>
+                <Button
+                  asChild
+                  className={`mt-6 w-full transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] ${plan.featured ? "bg-orange-500 text-black hover:bg-orange-400" : ""}`}
+                  variant={plan.featured ? "default" : "outline"}
+                >
+                  <Link href="/app">
+                    {plan.cta} <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <div className="mt-6 grid gap-3 border-t border-white/10 pt-6">
+                  {plan.features.map((feature) => (
+                    <span key={feature} className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-orange-300" />
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </HoverLift>
+          </RevealItem>
         ))}
-      </div>
+      </RevealGroup>
     </section>
   );
 }
 
 function FinalCta() {
   return (
-    <section className="border-y border-white/10 py-20 text-center">
-      <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
-        Agent-ready docs intelligence
-      </Badge>
-      <h2 className="mx-auto mt-5 max-w-3xl text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">
-        Know what your docs are missing <span className="text-orange-400">before your users do.</span>
-      </h2>
-      <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-        Scan documentation, score readiness, and get a prioritized fix plan before friction becomes support load.
-      </p>
-      <div className="mt-8 flex justify-center">
-        <Button asChild size="lg" className="h-12 rounded-xl bg-orange-500 px-7 text-black hover:bg-orange-400">
-          <Link href="/app">
-            Scan your docs <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
-      </div>
+    <section className="relative overflow-hidden border-y border-white/10 py-20 text-center">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-500/10 blur-3xl" />
+      <Reveal y={16}>
+        <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
+          Agent-ready docs intelligence
+        </Badge>
+        <h2 className="mx-auto mt-5 max-w-3xl text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">
+          Know what your docs are missing <span className="text-orange-400">before your users do.</span>
+        </h2>
+        <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+          Scan documentation, score readiness, and get a prioritized fix plan before friction becomes support load.
+        </p>
+        <div className="mt-8 flex justify-center">
+          <Button
+            asChild
+            size="lg"
+            className="h-12 rounded-xl bg-orange-500 px-7 text-black shadow-lg shadow-orange-500/20 transition-transform duration-200 hover:scale-[1.04] hover:bg-orange-400 active:scale-[0.97]"
+          >
+            <Link href="/app">
+              Scan your docs <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </Reveal>
     </section>
   );
 }
@@ -537,8 +602,8 @@ function Footer() {
 
 function FeatureCard({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#0b0d10]/90 p-5">
-      <div className="grid h-11 w-11 place-items-center rounded-xl border border-orange-500/25 bg-orange-500/10 text-orange-300">
+    <div className="group h-full rounded-3xl border border-white/10 bg-[#0b0d10]/90 p-5 transition-colors duration-300 hover:border-orange-500/30">
+      <div className="grid h-11 w-11 place-items-center rounded-xl border border-orange-500/25 bg-orange-500/10 text-orange-300 transition-shadow duration-300 group-hover:shadow-[0_0_24px_rgba(255,106,0,0.35)]">
         <Icon className="h-5 w-5" />
       </div>
       <p className="mt-8 font-medium">{title}</p>
@@ -547,28 +612,30 @@ function FeatureCard({ icon: Icon, title, text }: { icon: LucideIcon; title: str
   );
 }
 
-function Metric({ value, label, icon: Icon }: { value: string; label: string; icon: LucideIcon }) {
+function Metric({
+  value,
+  decimals = 0,
+  suffix = "",
+  label,
+  icon: Icon,
+}: {
+  value: number;
+  decimals?: number;
+  suffix?: string;
+  label: string;
+  icon: LucideIcon;
+}) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="grid h-9 w-9 place-items-center rounded-xl border border-orange-500/25 bg-orange-500/10 text-orange-300">
+    <div className="flex min-w-0 flex-col items-center gap-2 text-center sm:flex-row sm:text-left sm:gap-3">
+      <span className="grid h-8 w-8 place-items-center rounded-xl border border-orange-500/25 bg-orange-500/10 text-orange-300 sm:h-9 sm:w-9">
         <Icon className="h-4 w-4" />
       </span>
-      <span>
-        <strong className="block text-foreground">{value}</strong>
+      <span className="min-w-0">
+        <strong className="block text-foreground">
+          <AnimatedNumber value={value} decimals={decimals} suffix={suffix} />
+        </strong>
         <span className="text-xs text-muted-foreground">{label}</span>
       </span>
-    </div>
-  );
-}
-
-function ScoreRing({ score }: { score: number }) {
-  return (
-    <div className="relative grid h-36 w-36 place-items-center rounded-full bg-[conic-gradient(from_210deg,#ff6a00_0deg,#ff8a1f_calc(var(--score)*3.6deg),rgba(255,255,255,0.08)_0deg)]" style={{ "--score": score } as React.CSSProperties}>
-      <div className="absolute inset-3 rounded-full bg-[#0b0d10]" />
-      <div className="relative text-center">
-        <p className="text-4xl font-semibold tracking-[-0.05em]">{score}</p>
-        <p className="text-xs text-muted-foreground">/100</p>
-      </div>
     </div>
   );
 }

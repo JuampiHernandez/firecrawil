@@ -11,6 +11,7 @@
     "import:audit-cache": "tsx scripts/import-audit-cache.ts"
   },
   "dependencies": {
+    "@number-flow/react": "^0.6.1",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.0",
     "ai": "^7.0.11",
