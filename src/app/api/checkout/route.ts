@@ -3,8 +3,6 @@ import { z } from "zod";
 import { getCreditPack } from "@/lib/payments/credits";
 import { createClient } from "@/lib/supabase/server";
 
-const paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === "true";
-
 const requestSchema = z.object({
   packId: z.enum(["starter", "growth"]),
 });
@@ -19,10 +17,6 @@ type LemonSqueezyCheckoutResponse = {
 };
 
 export async function POST(request: Request) {
-  if (!paymentsEnabled) {
-    return NextResponse.json({ error: "Paid credit checkout is not enabled yet." }, { status: 503 });
-  }
-
   const parsed = requestSchema.safeParse(await request.json());
 
   if (!parsed.success) {

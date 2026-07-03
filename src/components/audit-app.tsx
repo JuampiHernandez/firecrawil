@@ -66,7 +66,6 @@ const creditPacks = [
 ] as const;
 
 const customCreditsEmail = "juampi@juampi.dev";
-const paymentsEnabled = process.env.NEXT_PUBLIC_PAYMENTS_ENABLED === "true";
 
 const scanOutputs = [
   { title: "Ranked issues", detail: "Severity, impact, and evidence" },
@@ -98,20 +97,6 @@ type AccountCredits = {
   used: number;
   granted: number;
 };
-
-function buildCreditRequestHref(user: CurrentUser | null) {
-  const subject = "More DocScanner credits";
-  const body = [
-    "Hi Juampi,",
-    "",
-    "I would like more DocScanner credits.",
-    "",
-    `Account: ${user?.email ?? "Add your account email here"}`,
-    "Use case: ",
-  ].join("\n");
-
-  return `mailto:${customCreditsEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
 
 export function AuditApp({
   user,
@@ -269,11 +254,6 @@ export function AuditApp({
   }
 
   async function buyCredits(packId: string) {
-    if (!paymentsEnabled) {
-      window.location.href = buildCreditRequestHref(user);
-      return;
-    }
-
     if (!user) {
       await signInWithGoogle();
       return;
@@ -588,7 +568,7 @@ function Sidebar({
             </div>
             <Button size="sm" onClick={onAddCredits} className="bg-orange-500 text-black hover:bg-orange-400">
               <PackagePlus className="mr-2 h-4 w-4" />
-              {paymentsEnabled ? "Add credits" : "Request credits"}
+              Add credits
             </Button>
 
             <button
@@ -648,7 +628,7 @@ function Sidebar({
                   onClick={onAddCredits}
                   className="w-full rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2 text-left text-xs text-orange-100 transition hover:border-orange-500/40 hover:bg-orange-500/15"
                 >
-                  {creditsRemaining} credits left. {paymentsEnabled ? "Manage credits" : "Request more"}
+                  {creditsRemaining} credits left. Manage credits
                 </button>
                 <Button variant="outline" size="sm" onClick={onSignOut} className="w-full">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -722,40 +702,6 @@ function PricingSection({
   checkoutPackId: string | null;
   onOpenCredits: () => void;
 }) {
-  if (!paymentsEnabled) {
-    return (
-      <Card className="border-white/10 bg-[#111317]/85 shadow-xl shadow-black/20">
-        <CardHeader className="lg:pb-2">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <Badge className="mb-3 w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10 lg:px-3 lg:py-1 lg:text-sm">
-                Credits by request
-              </Badge>
-              <CardTitle className="text-2xl tracking-[-0.03em] lg:text-3xl">Need more scan credits?</CardTitle>
-              <CardDescription className="lg:text-base">
-                Paid checkout is paused while I finish the credit options. Email me your account and use case, and I will add more free credits.
-              </CardDescription>
-            </div>
-            {user ? (
-              <Button variant="outline" onClick={onOpenCredits} className="border-orange-500/30 text-orange-200 lg:h-11 lg:px-5 lg:text-base">
-                <User className="mr-2 h-4 w-4" />
-                {creditsRemaining} credits left
-              </Button>
-            ) : (
-              <Button onClick={onSignIn} className="bg-orange-500 text-black hover:bg-orange-400 lg:h-11 lg:px-5 lg:text-base">
-                <LogIn className="mr-2 h-4 w-4" />
-                Sign in to request
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <RequestCreditsPanel user={user} />
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="border-white/10 bg-[#111317]/85 shadow-xl shadow-black/20">
       <CardHeader>
@@ -810,30 +756,6 @@ function PricingSection({
         </Card>
       </CardContent>
     </Card>
-  );
-}
-
-function RequestCreditsPanel({ user }: { user: CurrentUser | null }) {
-  return (
-    <div className="grid gap-4 rounded-2xl border border-orange-500/20 bg-orange-500/[0.06] p-4 sm:grid-cols-[1fr_auto] sm:items-center lg:gap-6 lg:p-6">
-      <div className="flex gap-3 lg:gap-4">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-orange-500/25 bg-orange-500/10 lg:h-12 lg:w-12">
-          <Mail className="h-5 w-5 text-orange-300 lg:h-6 lg:w-6" />
-        </div>
-        <div className="space-y-1 lg:space-y-2">
-          <p className="font-medium lg:text-lg">Request more free credits</p>
-          <p className="text-sm text-muted-foreground lg:text-base">
-            Include your account email and what you are scanning so I can add the right amount manually.
-          </p>
-        </div>
-      </div>
-      <Button asChild className="w-full justify-center bg-orange-500 text-black hover:bg-orange-400 sm:w-auto lg:h-12 lg:px-6 lg:text-base">
-        <a href={buildCreditRequestHref(user)}>
-          Email juampi
-          <ArrowRight className="h-4 w-4" />
-        </a>
-      </Button>
-    </div>
   );
 }
 
@@ -920,9 +842,7 @@ function CreditsModal({
           </Badge>
           <CardTitle className="text-2xl tracking-[-0.04em]">Your scan balance</CardTitle>
           <CardDescription>
-            {paymentsEnabled
-              ? "Add credits with Lemon Squeezy. Card details stay with Lemon Squeezy, not DocScanner."
-              : "Paid checkout is paused while I finish credit options. Request more credits by email for now."}
+            Add credits with Lemon Squeezy. Card details stay with Lemon Squeezy, not DocScanner.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -930,7 +850,7 @@ function CreditsModal({
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{user?.name ?? "Not signed in"}</p>
               <p className="truncate text-xs text-muted-foreground">
-                {user?.email ?? (paymentsEnabled ? "Sign in with Google to buy credits." : "Sign in with Google to request credits.")}
+                {user?.email ?? "Sign in with Google to buy credits."}
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -947,39 +867,33 @@ function CreditsModal({
             </Button>
           ) : null}
 
-          {paymentsEnabled ? (
-            <>
-              <div className="grid gap-4 md:grid-cols-2">
-                {creditPacks.map((pack) => (
-                  <CreditPackCard
-                    key={pack.id}
-                    pack={pack}
-                    onBuyCredits={onBuyCredits}
-                    checkoutPackId={checkoutPackId}
-                    disabled={!user}
-                  />
-                ))}
-              </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {creditPacks.map((pack) => (
+              <CreditPackCard
+                key={pack.id}
+                pack={pack}
+                onBuyCredits={onBuyCredits}
+                checkoutPackId={checkoutPackId}
+                disabled={!user}
+              />
+            ))}
+          </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-center sm:text-left">
-                    <p className="font-medium">Need a custom credit bundle?</p>
-                    <p className="text-sm text-muted-foreground">
-                      Email me your account and use case and I will give more free credits.
-                    </p>
-                  </div>
-                  <Button asChild variant="outline" className="w-full justify-center border-orange-500/30 text-orange-200 sm:w-auto">
-                    <a href={`mailto:${customCreditsEmail}?subject=Custom DocScanner credits`}>
-                      {customCreditsEmail}
-                    </a>
-                  </Button>
-                </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-center sm:text-left">
+                <p className="font-medium">Need a custom credit bundle?</p>
+                <p className="text-sm text-muted-foreground">
+                  Email me your account and use case for a manual bundle.
+                </p>
               </div>
-            </>
-          ) : (
-            <RequestCreditsPanel user={user} />
-          )}
+              <Button asChild variant="outline" className="w-full justify-center border-orange-500/30 text-orange-200 sm:w-auto">
+                <a href={`mailto:${customCreditsEmail}?subject=Custom DocScanner credits`}>
+                  {customCreditsEmail}
+                </a>
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -1166,13 +1080,13 @@ function Results({
             {user ? (
               <Button variant="outline" onClick={onRescan} className="w-full">
                 <RefreshCw className="mr-2 h-4 w-4" />
-                {canRescan ? "Run fresh rescan" : paymentsEnabled ? "Add credits to rescan" : "Request credits to rescan"}
+                {canRescan ? "Run fresh rescan" : "Add credits to rescan"}
               </Button>
             ) : null}
             {user && !canRescan ? (
               <Button variant="outline" onClick={onAddCredits} className="w-full border-orange-500/30 text-orange-200">
                 <PackagePlus className="mr-2 h-4 w-4" />
-                {paymentsEnabled ? "Buy scan credits" : "Request more credits"}
+                Buy scan credits
               </Button>
             ) : null}
           </CardContent>
