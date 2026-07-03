@@ -181,6 +181,44 @@ export function Spotlight({ children, className }: { children: ReactNode; classN
   );
 }
 
+export function RadarPulse({ className }: { className?: string }) {
+  return (
+    <div className={cn("pointer-events-none overflow-hidden rounded-full", className)}>
+      <div className="relative h-full w-full">
+        <motion.div
+          className="absolute inset-0 rounded-full"
+          style={{ background: "conic-gradient(from 0deg, rgba(255,138,31,0.45), transparent 30%, transparent 70%, rgba(255,138,31,0.25))" }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+        />
+        <div className="absolute inset-[3px] rounded-full bg-[#0b0c0e]" />
+        {[0, 1, 2].map((ring) => (
+          <motion.span
+            key={ring}
+            className="absolute inset-0 rounded-full border border-orange-400/50"
+            initial={{ scale: 0.2, opacity: 0.7 }}
+            animate={{ scale: 1.1, opacity: 0 }}
+            transition={{ duration: 3.2, repeat: Infinity, ease: "easeOut", delay: ring * 1.05 }}
+          />
+        ))}
+        <div className="absolute inset-0 grid place-items-center">
+          <motion.span
+            className="h-2.5 w-2.5 rounded-full bg-orange-400"
+            animate={{
+              boxShadow: [
+                "0 0 8px rgba(255,106,0,0.55)",
+                "0 0 22px rgba(255,106,0,1)",
+                "0 0 8px rgba(255,106,0,0.55)",
+              ],
+            }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PulseGlow({ className }: { className?: string }) {
   return (
     <motion.div
