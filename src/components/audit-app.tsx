@@ -122,6 +122,7 @@ export function AuditApp({
   const [isReporting, setIsReporting] = useState(false);
   const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
   const [checkoutPackId, setCheckoutPackId] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [accountCredits, setAccountCredits] = useState(credits);
   const [error, setError] = useState<string | null>(null);
   const pendingScanStartedRef = useRef(false);
@@ -260,6 +261,7 @@ export function AuditApp({
     }
 
     setError(null);
+    setCheckoutError(null);
     setCheckoutPackId(packId);
 
     try {
@@ -276,7 +278,9 @@ export function AuditApp({
 
       window.location.assign(payload.url);
     } catch (checkoutError) {
-      setError(checkoutError instanceof Error ? checkoutError.message : "Could not create checkout.");
+      const message = checkoutError instanceof Error ? checkoutError.message : "Could not create checkout.";
+      setError(message);
+      setCheckoutError(message);
       setCheckoutPackId(null);
     }
   }
@@ -457,10 +461,14 @@ export function AuditApp({
         open={isCreditsModalOpen}
         user={user}
         credits={accountCredits}
-        onClose={() => setIsCreditsModalOpen(false)}
+        onClose={() => {
+          setIsCreditsModalOpen(false);
+          setCheckoutError(null);
+        }}
         onSignIn={signInWithGoogle}
         onBuyCredits={buyCredits}
         checkoutPackId={checkoutPackId}
+        checkoutError={checkoutError}
       />
     </main>
   );
@@ -812,6 +820,7 @@ function CreditsModal({
   onSignIn,
   onBuyCredits,
   checkoutPackId,
+  checkoutError,
 }: {
   open: boolean;
   user: CurrentUser | null;
@@ -820,6 +829,7 @@ function CreditsModal({
   onSignIn: () => void;
   onBuyCredits: (packId: string) => void;
   checkoutPackId: string | null;
+  checkoutError: string | null;
 }) {
   if (!open) return null;
 
@@ -865,6 +875,14 @@ function CreditsModal({
               <LogIn className="h-4 w-4" />
               Sign in with Google
             </Button>
+          ) : null}
+
+          {checkoutError ? (
+            <Alert className="border-red-500/30 bg-red-500/10">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Checkout issue</AlertTitle>
+              <AlertDescription>{checkoutError}</AlertDescription>
+            </Alert>
           ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
