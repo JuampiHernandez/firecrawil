@@ -111,7 +111,7 @@ export default function LandingPage() {
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_8%,rgba(255,106,0,0.18),transparent_28rem),radial-gradient(circle_at_76%_22%,rgba(255,106,0,0.12),transparent_26rem),linear-gradient(180deg,rgba(255,255,255,0.05),transparent_20rem)]" />
       <div className="pointer-events-none fixed inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-500/60 to-transparent" />
 
-      <div className="relative mx-auto flex w-full max-w-[90rem] flex-col px-4 py-4 sm:px-7 lg:px-10 2xl:px-14">
+      <div className="relative mx-auto flex w-full max-w-[90rem] flex-col px-4 py-4 sm:px-7 lg:px-10 2xl:max-w-[110rem] 2xl:px-16 3xl:max-w-[132rem] 3xl:px-24">
         <Header />
         <Hero />
         <ProblemSection />
@@ -166,17 +166,17 @@ function Header() {
 
 function Hero() {
   return (
-    <Spotlight className="grid items-center gap-8 py-10 sm:py-14 lg:min-h-[40rem] lg:grid-cols-[0.9fr_1.1fr] lg:content-center lg:gap-14 lg:py-20 xl:min-h-[46rem] xl:gap-20 2xl:min-h-[50rem]">
-      <Reveal className="max-w-2xl space-y-6 sm:space-y-7 lg:space-y-8" y={16}>
+    <Spotlight className="grid items-center gap-8 py-10 sm:py-14 lg:min-h-[40rem] lg:grid-cols-[0.9fr_1.1fr] lg:content-center lg:gap-14 lg:py-20 xl:min-h-[46rem] xl:gap-20 2xl:min-h-[50rem] 3xl:min-h-[54rem] 3xl:gap-28">
+      <Reveal className="max-w-2xl space-y-6 sm:space-y-7 lg:space-y-8 3xl:max-w-3xl" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           <Sparkles className="mr-1 h-3.5 w-3.5" />
           Developer docs lighthouse
         </Badge>
         <div className="space-y-5 lg:space-y-6">
-          <h1 className="text-[3rem] font-semibold leading-[0.92] tracking-[-0.06em] text-balance sm:text-6xl lg:text-7xl">
+          <h1 className="text-[3rem] font-semibold leading-[0.92] tracking-[-0.06em] text-balance sm:text-6xl lg:text-7xl 3xl:text-8xl">
             The Lighthouse for <span className="text-orange-400">Developer Docs.</span>
           </h1>
-          <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-lg sm:leading-7 lg:text-xl lg:leading-8">
+          <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-lg sm:leading-7 lg:text-xl lg:leading-8 3xl:max-w-2xl 3xl:text-2xl 3xl:leading-9">
             Find broken docs paths, agent blockers, stale examples, and missing specs in one scan.
           </p>
           <RotatingSignal />
@@ -302,12 +302,12 @@ function ProductMockup() {
 
 function ProblemSection() {
   return (
-    <section className="grid gap-10 py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:py-28">
+    <section className="grid gap-10 py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:py-28 3xl:py-36">
       <Reveal className="space-y-5 lg:space-y-6" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Why DocScanner
         </Badge>
-        <h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+        <h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl 3xl:text-7xl">
           Docs can look complete and still <span className="text-orange-400">fail the first request.</span>
         </h2>
         <p className="max-w-xl text-muted-foreground lg:text-lg">
@@ -330,12 +330,12 @@ function ProblemSection() {
 
 function IssuesSection() {
   return (
-    <section className="grid gap-10 py-20 lg:grid-cols-[0.75fr_1.25fr] lg:gap-14 lg:py-28">
+    <section className="grid gap-10 py-20 lg:grid-cols-[0.75fr_1.25fr] lg:gap-14 lg:py-28 3xl:py-36">
       <Reveal className="space-y-6" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Issues and checks
         </Badge>
-        <h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+        <h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl 3xl:text-7xl">
           See exactly what is broken - and <span className="text-orange-400">why.</span>
         </h2>
         <p className="text-muted-foreground lg:text-lg">
@@ -379,12 +379,12 @@ function IssuesSection() {
 
 function ScoringSection() {
   return (
-    <section className="grid gap-10 py-20 lg:grid-cols-[0.75fr_1.25fr] lg:gap-14 lg:py-28">
+    <section className="grid gap-10 py-20 lg:grid-cols-[0.75fr_1.25fr] lg:gap-14 lg:py-28 3xl:py-36">
       <Reveal className="space-y-6" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Scoring framework
         </Badge>
-        <h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+        <h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl 3xl:text-7xl">
           One score, built from the signals that <span className="text-orange-400">matter.</span>
         </h2>
         <p className="text-muted-foreground lg:text-lg">
@@ -420,12 +420,12 @@ function ScoringSection() {
 
 function ReportSection() {
   return (
-    <section className="grid gap-10 py-20 lg:grid-cols-[0.75fr_1.25fr] lg:gap-14 lg:py-28">
+    <section className="grid gap-10 py-20 lg:grid-cols-[0.75fr_1.25fr] lg:gap-14 lg:py-28 3xl:py-36">
       <Reveal className="space-y-6" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Remediation reports
         </Badge>
-        <h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+        <h2 className="text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl 3xl:text-7xl">
           Turn audit results <span className="text-orange-400">into a fix plan</span> your team can ship.
         </h2>
         <p className="text-muted-foreground lg:text-lg">
@@ -465,12 +465,12 @@ acceptance:
 
 function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-20 text-center lg:py-28">
+    <section id="how-it-works" className="py-20 text-center lg:py-28 3xl:py-36">
       <Reveal y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           How it works
         </Badge>
-        <h2 className="mx-auto mt-5 max-w-3xl text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+        <h2 className="mx-auto mt-5 max-w-3xl text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl 3xl:text-7xl">
           Scan. Score. Fix. <span className="text-orange-400">Repeat.</span>
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-muted-foreground lg:text-lg">
@@ -498,12 +498,12 @@ function HowItWorksSection() {
 
 function PricingSection() {
   return (
-    <section id="pricing" className="py-20 lg:py-28">
+    <section id="pricing" className="py-20 lg:py-28 3xl:py-36">
       <Reveal className="mx-auto max-w-3xl text-center" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           Transparent pricing
         </Badge>
-        <h2 className="mt-5 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl">
+        <h2 className="mt-5 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl lg:text-6xl 3xl:text-7xl">
           Simple pricing for teams improving <span className="text-orange-400">developer docs.</span>
         </h2>
         <p className="mt-4 text-muted-foreground lg:text-lg">Start free, scale when you are ready. All plans include core scanning and reports your team can trust.</p>
