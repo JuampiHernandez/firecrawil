@@ -10,6 +10,7 @@ const requestSchema = z.object({
 type LemonSqueezyCheckoutResponse = {
   data?: {
     attributes?: {
+      test_mode?: boolean;
       url?: string;
     };
   };
@@ -109,10 +110,18 @@ export async function POST(request: Request) {
 
   const payload = (await response.json()) as LemonSqueezyCheckoutResponse;
   const checkoutUrl = payload.data?.attributes?.url;
+  const isTestModeCheckout = payload.data?.attributes?.test_mode === true;
 
   if (!response.ok || !checkoutUrl) {
     const message = payload.errors?.[0]?.detail ?? payload.errors?.[0]?.title ?? "Could not create checkout.";
     return NextResponse.json({ error: message }, { status: 502 });
+  }
+
+  if (process.env.VERCEL_ENV === "production" && isTestModeCheckout) {
+    return NextResponse.json(
+      { error: "Lemon Squeezy created a test-mode checkout. Use live-mode API key, store ID, and variant IDs in Vercel Production." },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ url: checkoutUrl });
