@@ -81,6 +81,8 @@ const signupBenefits = [
   "Track score changes across rescans",
 ];
 
+const maxPastScansInSidebar = 6;
+
 type CurrentUser = {
   email: string;
   name?: string;
@@ -512,8 +514,11 @@ function Sidebar({
 }) {
   const [pastScansOpen, setPastScansOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [pastScansModalOpen, setPastScansModalOpen] = useState(false);
   const creditsRemaining = Math.max(0, credits.granted - credits.used);
   const displayName = getDisplayName(user);
+  const visiblePastScans = pastScans.slice(0, maxPastScansInSidebar);
+  const hiddenPastScanCount = Math.max(0, pastScans.length - visiblePastScans.length);
 
   return (
     <>
@@ -593,7 +598,8 @@ function Sidebar({
             {pastScansOpen ? (
               <div className="grid gap-1 pl-2">
                 {pastScans.length > 0 ? (
-                  pastScans.map((scan) => (
+                  <>
+                  {visiblePastScans.map((scan) => (
                     <button
                       key={scan.id}
                       type="button"
@@ -606,7 +612,17 @@ function Sidebar({
                       </div>
                       <p className="text-xs text-muted-foreground">{formatScanDate(scan.scannedAt)}</p>
                     </button>
-                  ))
+                  ))}
+                  {hiddenPastScanCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setPastScansModalOpen(true)}
+                      className="mt-1 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2 text-left text-xs font-medium text-orange-100 transition hover:border-orange-500/40 hover:bg-orange-500/15"
+                    >
+                      Click more ({hiddenPastScanCount} more tested startups)
+                    </button>
+                  ) : null}
+                  </>
                 ) : (
                   <p className="px-3 py-1 text-xs text-muted-foreground">No scans yet. Run your first audit above.</p>
                 )}
@@ -691,7 +707,78 @@ function Sidebar({
         </p>
       </div>
     </aside>
+    <PastScansModal
+      open={pastScansModalOpen}
+      pastScans={pastScans}
+      onClose={() => setPastScansModalOpen(false)}
+      onSelectPastScan={(scanUrl) => {
+        setPastScansModalOpen(false);
+        onSelectPastScan(scanUrl);
+      }}
+    />
     </>
+  );
+}
+
+function PastScansModal({
+  open,
+  pastScans,
+  onClose,
+  onSelectPastScan,
+}: {
+  open: boolean;
+  pastScans: PastScan[];
+  onClose: () => void;
+  onSelectPastScan: (url: string) => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-md sm:py-10">
+      <Card className="relative w-full max-w-2xl border-orange-500/25 bg-[#111317] shadow-2xl shadow-black/50">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-full border border-white/10 bg-white/[0.03] p-2 text-muted-foreground transition hover:text-foreground"
+          aria-label="Close tested startups modal"
+        >
+          <XCircle className="h-4 w-4" />
+        </button>
+        <CardHeader className="pr-14">
+          <Badge className="mb-3 w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
+            Tested startups
+          </Badge>
+          <CardTitle className="text-2xl tracking-[-0.04em]">All analyzed companies</CardTitle>
+          <CardDescription>
+            Full list of stored startup scans with their DocScanner punctuation.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[520px] pr-3">
+            <div className="grid gap-2">
+              {pastScans.map((scan) => (
+                <button
+                  key={scan.id}
+                  type="button"
+                  onClick={() => onSelectPastScan(scan.url)}
+                  className="grid gap-2 rounded-2xl border border-white/10 bg-black/20 p-4 text-left transition hover:border-orange-500/35 hover:bg-white/[0.04] sm:grid-cols-[1fr_auto] sm:items-center"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{formatScanHost(scan.url)}</p>
+                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{scan.url}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Tested {formatScanDate(scan.scannedAt)}</p>
+                  </div>
+                  <div className="flex items-center gap-2 sm:justify-end">
+                    <span className="text-xs text-muted-foreground">Punctuation</span>
+                    <ScoreBadge score={scan.score} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

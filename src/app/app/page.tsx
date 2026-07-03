@@ -1,6 +1,8 @@
 import { AuditApp } from "@/components/audit-app";
 import { createClient } from "@/lib/supabase/server";
 
+const ownerProfileEmail = "juampihernandez01@gmail.com";
+
 export default async function AppPage() {
   const props = await getAuditAppProps();
   return <AuditApp {...props} />;
@@ -17,14 +19,9 @@ async function getAuditAppProps() {
       return { user: null, isPaid: false, isSupabaseConfigured: true, pastScans: [], credits: { used: 0, granted: 0 } };
     }
 
-    const [{ data: profile }, { data: pastScans }] = await Promise.all([
+    const [{ data: profile }, pastScans] = await Promise.all([
       supabase.from("profiles").select("is_paid, credits_granted, credits_used").eq("id", user.id).maybeSingle(),
-      supabase
-        .from("audits")
-        .select("id, input_url, normalized_url, overall_score, scanned_at")
-        .eq("created_by", user.id)
-        .order("scanned_at", { ascending: false })
-        .limit(15),
+      getPastScans(supabase, user.id, user.email),
     ]);
 
     const isPaid = Boolean(profile?.is_paid);
@@ -42,7 +39,7 @@ async function getAuditAppProps() {
         used: creditsUsed,
         granted: creditsGranted,
       },
-      pastScans: (pastScans ?? []).map((scan) => ({
+      pastScans: (pastScans.data ?? []).map((scan) => ({
         id: scan.id,
         url: scan.input_url || scan.normalized_url,
         score: scan.overall_score,
@@ -52,4 +49,21 @@ async function getAuditAppProps() {
   } catch {
     return { user: null, isPaid: false, isSupabaseConfigured: false, pastScans: [], credits: { used: 0, granted: 0 } };
   }
+}
+
+async function getPastScans(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  email?: string,
+) {
+  const query = supabase
+    .from("audits")
+    .select("id, input_url, normalized_url, overall_score, scanned_at")
+    .order("scanned_at", { ascending: false });
+
+  if (email?.toLowerCase() === ownerProfileEmail) {
+    return query;
+  }
+
+  return query.eq("created_by", userId).limit(15);
 }
