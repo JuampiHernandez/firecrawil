@@ -75,6 +75,13 @@ const scanOutputs = [
   { title: "Fix plan", detail: "Repo-ready remediation tasks" },
 ];
 
+const signupBenefits = [
+  "2 free fresh-scan credits to start",
+  "Stored results you can revisit anytime",
+  "Downloadable PDF and agent-ready reports",
+  "Track score changes across rescans",
+];
+
 type CurrentUser = {
   email: string;
   name?: string;
@@ -330,21 +337,21 @@ export function AuditApp({
     <main className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_2%,rgba(255,106,0,0.2),transparent_28rem),radial-gradient(circle_at_86%_10%,rgba(255,176,32,0.14),transparent_24rem),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_18rem)]" />
       <RadarPulse className="fixed right-8 top-6 hidden h-72 w-72 lg:block" />
-      <div className="relative mx-auto flex w-full max-w-[1680px] flex-col gap-3 px-3 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:min-h-screen lg:flex-row lg:gap-6 lg:p-6 xl:gap-8 xl:p-8">
-        <Sidebar
-          user={user}
-          isPaid={isPaid}
-          pastScans={pastScans}
-          credits={accountCredits}
-          onSignIn={signInWithGoogle}
-          onSignOut={signOut}
-          onSelectPastScan={loadPastScan}
-          onAddCredits={() => setIsCreditsModalOpen(true)}
-        />
+      <div className="relative mx-auto flex w-full max-w-[1680px] flex-col gap-3 px-3 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:gap-6 lg:p-6 xl:gap-8 xl:p-8 2xl:max-w-[1960px] 2xl:gap-10 2xl:p-10 3xl:max-w-[2320px] 3xl:gap-12 3xl:p-14">
+        <div className="flex flex-col gap-3 sm:gap-5 lg:flex-row lg:items-stretch lg:gap-6 xl:gap-8 2xl:gap-10 3xl:gap-12">
+          <Sidebar
+            user={user}
+            isPaid={isPaid}
+            pastScans={pastScans}
+            credits={accountCredits}
+            onSignIn={signInWithGoogle}
+            onSignOut={signOut}
+            onSelectPastScan={loadPastScan}
+            onAddCredits={() => setIsCreditsModalOpen(true)}
+          />
 
-        <section className="flex min-w-0 flex-1 flex-col gap-5 lg:gap-6 xl:gap-7">
-          <Card className="rounded-2xl border-white/10 bg-[#111317]/85 shadow-2xl shadow-black/30 backdrop-blur sm:rounded-3xl">
-            <CardContent className="grid gap-5 p-4 sm:gap-6 sm:p-6 lg:p-8 xl:grid-cols-[0.9fr_1.1fr] xl:gap-10 xl:p-10 2xl:p-12">
+          <Card className="min-w-0 flex-1 rounded-2xl border-white/10 bg-[#111317]/85 shadow-2xl shadow-black/30 backdrop-blur sm:rounded-3xl">
+            <CardContent className="grid gap-5 p-4 sm:gap-6 sm:p-6 lg:p-8 xl:grid-cols-[0.9fr_1.1fr] xl:gap-10 xl:p-10 2xl:p-12 3xl:p-16">
               <div className="space-y-5 sm:space-y-6 lg:space-y-7">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className="w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10 lg:px-3 lg:py-1 lg:text-sm">
@@ -355,10 +362,10 @@ export function AuditApp({
                   </Badge>
                 </div>
                 <div className="max-w-3xl space-y-3 sm:space-y-4 lg:space-y-5">
-                  <h1 className="text-[2.55rem] font-semibold leading-[0.95] tracking-[-0.055em] text-balance sm:text-5xl lg:text-6xl xl:text-7xl">
+                  <h1 className="text-[2.55rem] font-semibold leading-[0.95] tracking-[-0.055em] text-balance sm:text-5xl lg:text-6xl xl:text-7xl 3xl:text-8xl">
                     The Lighthouse for <span className="text-orange-400">Developer Docs.</span>
                   </h1>
-                  <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-lg sm:leading-7 lg:text-xl lg:leading-8">
+                  <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-lg sm:leading-7 lg:text-xl lg:leading-8 3xl:max-w-3xl 3xl:text-2xl">
                     Find missing specs, stale examples, and agent blockers before users hit them.
                   </p>
                   {!user ? null : creditsRemaining < 1 ? (
@@ -401,7 +408,9 @@ export function AuditApp({
               <ScanPanel audit={audit} isAuditing={isAuditing} className={user ? "" : "hidden xl:block"} />
             </CardContent>
           </Card>
+        </div>
 
+        <section className="flex min-w-0 flex-col gap-5 lg:gap-6 xl:gap-7">
           {error ? (
             <Alert className="border-red-500/30 bg-red-500/10">
               <AlertTriangle className="h-4 w-4" />
@@ -527,7 +536,7 @@ function Sidebar({
       )}
     </aside>
 
-    <aside className="hidden shrink-0 flex-col justify-between gap-6 rounded-3xl border border-white/10 bg-[#0f1115]/80 p-4 shadow-2xl shadow-black/30 backdrop-blur lg:sticky lg:top-6 lg:flex lg:min-h-[16.5rem] lg:w-64 lg:self-start xl:w-72 xl:p-5">
+    <aside className="hidden shrink-0 flex-col justify-between gap-6 rounded-3xl border border-white/10 bg-[#0f1115]/80 p-4 shadow-2xl shadow-black/30 backdrop-blur lg:sticky lg:top-6 lg:flex lg:min-h-[16.5rem] lg:w-64 lg:self-stretch xl:w-72 xl:p-5 2xl:w-80 2xl:p-6 3xl:w-96">
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <DocScannerMark className="h-11 w-11 xl:h-12 xl:w-12" />
@@ -624,20 +633,37 @@ function Sidebar({
             ) : null}
           </nav>
         ) : (
-          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/[0.07] p-3">
-            <p className="text-sm font-medium text-orange-100">Try a real docs scan</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Sign up with Google to unlock scan credits, saved results, and reports.
-            </p>
+          <div className="space-y-4 xl:space-y-5">
+            <div className="rounded-2xl border border-orange-500/20 bg-orange-500/[0.07] p-3 xl:p-4">
+              <p className="text-sm font-medium text-orange-100 xl:text-base">Try a real docs scan</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground xl:text-sm">
+                Sign up with Google to unlock scan credits, saved results, and reports.
+              </p>
+            </div>
+            <div className="grid gap-2.5 rounded-2xl border border-white/10 bg-white/[0.02] p-3 xl:gap-3 xl:p-4">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground xl:text-xs">
+                What you unlock
+              </p>
+              {signupBenefits.map((benefit) => (
+                <span key={benefit} className="flex items-start gap-2.5 text-sm text-muted-foreground xl:text-base">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
+                  {benefit}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
       <div className="space-y-3">
         {!user ? (
-          <Button size="sm" onClick={onSignIn} className="w-full bg-orange-500 text-black hover:bg-orange-400">
+          <Button
+            onClick={onSignIn}
+            size="lg"
+            className="h-12 w-full rounded-xl bg-orange-500 text-black transition-transform duration-200 hover:scale-[1.02] hover:bg-orange-400 active:scale-[0.98] xl:h-14"
+          >
             <LogIn className="mr-2 h-4 w-4" />
-            Sign up to try the app
+            Log in
           </Button>
         ) : null}
 
