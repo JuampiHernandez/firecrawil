@@ -310,11 +310,11 @@ export function AnimatedScoreRing({ score, size = 144 }: { score: number; size?:
           className="text-orange-400"
         />
       </svg>
-      <div className="absolute text-center">
-        <p className="font-mono text-4xl font-semibold tracking-[-0.05em]">
+      <div className="absolute flex -translate-y-0.5 flex-col items-center text-center leading-none">
+        <p className="font-mono text-4xl font-semibold leading-none tracking-[-0.05em]">
           <NumberFlow value={display} />
         </p>
-        <p className="text-xs text-muted-foreground">/100</p>
+        <p className="mt-1 text-xs leading-none text-muted-foreground">/100</p>
       </div>
     </motion.div>
   );

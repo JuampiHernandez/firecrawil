@@ -111,7 +111,7 @@ export default function LandingPage() {
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_8%,rgba(255,106,0,0.18),transparent_28rem),radial-gradient(circle_at_76%_22%,rgba(255,106,0,0.12),transparent_26rem),linear-gradient(180deg,rgba(255,255,255,0.05),transparent_20rem)]" />
       <div className="pointer-events-none fixed inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-500/60 to-transparent" />
 
-      <div className="relative mx-auto flex w-full max-w-[90rem] flex-col px-4 py-4 sm:px-7 lg:px-10 2xl:max-w-[110rem] 2xl:px-16 3xl:max-w-[132rem] 3xl:px-24">
+      <div className="relative mx-auto flex w-full max-w-[88rem] flex-col px-4 py-3 sm:px-7 lg:px-10 2xl:px-12 3xl:max-w-[110rem] 3xl:px-20">
         <Header />
         <Hero />
         <ProblemSection />
@@ -166,14 +166,14 @@ function Header() {
 
 function Hero() {
   return (
-    <Spotlight className="grid items-center gap-8 py-10 sm:py-14 lg:min-h-[40rem] lg:grid-cols-[0.9fr_1.1fr] lg:content-center lg:gap-14 lg:py-20 xl:min-h-[46rem] xl:gap-20 2xl:min-h-[50rem] 3xl:min-h-[54rem] 3xl:gap-28">
-      <Reveal className="max-w-2xl space-y-6 sm:space-y-7 lg:space-y-8 3xl:max-w-3xl" y={16}>
+    <Spotlight className="grid items-center gap-8 py-8 sm:py-12 lg:min-h-[34rem] lg:grid-cols-[0.9fr_1.1fr] lg:content-center lg:gap-10 lg:py-10 xl:min-h-[38rem] xl:gap-14 2xl:min-h-[42rem] 3xl:min-h-[48rem] 3xl:gap-20">
+      <Reveal className="max-w-2xl space-y-5 sm:space-y-6 lg:space-y-7 3xl:max-w-3xl" y={16}>
         <Badge className="border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
           <Sparkles className="mr-1 h-3.5 w-3.5" />
           Developer docs lighthouse
         </Badge>
         <div className="space-y-5 lg:space-y-6">
-          <h1 className="text-[3rem] font-semibold leading-[0.92] tracking-[-0.06em] text-balance sm:text-6xl lg:text-7xl 3xl:text-8xl">
+          <h1 className="text-[3rem] font-semibold leading-[0.92] tracking-[-0.06em] text-balance sm:text-6xl lg:text-6xl xl:text-7xl 3xl:text-8xl">
             The Lighthouse for <span className="text-orange-400">Developer Docs.</span>
           </h1>
           <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-lg sm:leading-7 lg:text-xl lg:leading-8 3xl:max-w-2xl 3xl:text-2xl 3xl:leading-9">
@@ -202,7 +202,7 @@ function Hero() {
             </Link>
           </Button>
         </div>
-        <div className="grid max-w-xl grid-cols-3 justify-items-center gap-2 border-y border-white/10 py-4 text-sm sm:justify-items-start sm:gap-4 sm:py-5 lg:py-7">
+        <div className="grid max-w-xl grid-cols-3 justify-items-center gap-2 border-y border-white/10 py-4 text-sm sm:justify-items-start sm:gap-4 sm:py-5 lg:py-5">
           <Metric value={2847} label="scans run" icon={Globe2} />
           <Metric value={1.21} decimals={2} suffix="M+" label="links analyzed" icon={Radar} />
           <Metric value={8.63} decimals={2} suffix="K+" label="reports generated" icon={FileText} />
@@ -218,11 +218,11 @@ function Hero() {
 
 function ProductMockup() {
   return (
-    <HoverLift lift={-4} className="relative min-w-0">
-      <div id="product">
+    <HoverLift lift={-4} className="relative min-w-0 max-w-full">
+      <div id="product" className="mx-auto w-full max-w-[42rem] xl:max-w-[44rem]">
       <PulseGlow className="absolute -inset-4 rounded-[2rem] bg-orange-500/15 blur-3xl sm:-inset-6" />
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0d10]/95 p-3 shadow-2xl shadow-orange-950/30 sm:rounded-3xl sm:p-4 lg:p-6 xl:p-7">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4 text-xs text-muted-foreground lg:pb-5 lg:text-sm">
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0d10]/95 p-3 shadow-2xl shadow-orange-950/30 sm:rounded-3xl sm:p-4 lg:p-4 xl:p-5">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3 text-xs text-muted-foreground lg:pb-4">
           <div className="flex min-w-0 items-center gap-2">
             <Globe2 className="h-4 w-4" />
             <span className="truncate">docs.twilio.com</span>
@@ -233,13 +233,47 @@ function ProductMockup() {
           </div>
           <span className="shrink-0">2m ago</span>
         </div>
-        <div className="grid gap-4 pt-4 lg:grid-cols-[0.36fr_0.64fr] lg:gap-5 lg:pt-6">
-          <div className="rounded-2xl border border-white/10 bg-black/25 p-4 lg:p-5">
-            <p className="text-sm font-medium lg:text-base">Overall Score</p>
-            <div className="mt-5 grid place-items-center lg:mt-6">
-              <AnimatedScoreRing score={69} size={144} />
+        <div className="grid gap-3 pt-4 sm:hidden">
+          <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Overall Score</p>
+                <p className="mt-1 text-xs text-muted-foreground">Preview scan summary</p>
+              </div>
+              <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full border-4 border-orange-500/80 bg-orange-500/10">
+                <span className="text-xl font-semibold">69</span>
+              </div>
             </div>
-            <div className="mt-5 grid grid-cols-3 gap-2 border-t border-white/10 pt-4 text-center text-[11px] text-muted-foreground sm:text-xs lg:mt-6 lg:pt-5 lg:text-xs">
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] text-muted-foreground">
+              <span className="rounded-xl bg-white/[0.04] px-2 py-2">
+                <strong className="block text-sm text-foreground">80</strong> Links
+              </span>
+              <span className="rounded-xl bg-white/[0.04] px-2 py-2">
+                <strong className="block text-sm text-foreground">14</strong> Issues
+              </span>
+              <span className="rounded-xl bg-white/[0.04] px-2 py-2">
+                <strong className="block text-sm text-foreground">160</strong> Assets
+              </span>
+            </div>
+          </div>
+          <div className="grid gap-2">
+            {issueRows.slice(0, 2).map(([issue, status]) => (
+              <div key={issue} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5">
+                <AlertTriangle className={status === "Fail" ? "h-4 w-4 shrink-0 text-red-400" : "h-4 w-4 shrink-0 text-orange-300"} />
+                <p className="min-w-0 truncate text-sm">{issue}</p>
+                <span className="ml-auto shrink-0 text-xs text-orange-200">High</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="hidden gap-4 pt-4 sm:grid lg:grid-cols-[0.34fr_0.66fr] lg:gap-4 lg:pt-4">
+          <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <p className="text-sm font-medium">Overall Score</p>
+            <div className="mt-4 grid place-items-center">
+              <AnimatedScoreRing score={69} size={140} />
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/10 pt-4 text-center text-[11px] text-muted-foreground sm:text-xs">
               <span>
                 <strong className="block text-base text-foreground lg:text-lg">80</strong> Links
               </span>
@@ -251,16 +285,16 @@ function ProductMockup() {
               </span>
             </div>
           </div>
-          <div className="grid gap-4 lg:gap-5">
-            <div className="grid gap-3 sm:grid-cols-3 lg:gap-4">
+          <div className="grid gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               {scoreCards.slice(0, 6).map(([label, score, status, Icon]) => (
                 <div
                   key={label}
-                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 transition-colors duration-300 hover:border-orange-500/30 hover:bg-white/[0.05] lg:p-4"
+                  className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-3 transition-colors duration-300 hover:border-orange-500/30 hover:bg-white/[0.05]"
                 >
-                  <div className="flex items-center justify-between gap-2 text-xs lg:text-sm">
-                    <span>{label}</span>
-                    <Icon className="h-4 w-4 text-orange-300" />
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="min-w-0">{label}</span>
+                    <Icon className="h-4 w-4 shrink-0 text-orange-300" />
                   </div>
                   <div className="mt-3 flex items-center gap-2 lg:mt-4">
                     <AnimatedBar value={score} />
@@ -269,24 +303,24 @@ function ProductMockup() {
                 </div>
               ))}
             </div>
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-3 sm:p-4 lg:p-5">
-              <p className="mb-3 text-sm font-medium lg:text-base">Top issues</p>
-              <div className="grid gap-2 lg:gap-3">
+            <div className="rounded-2xl border border-white/10 bg-black/25 p-3 sm:p-4">
+              <p className="mb-3 text-sm font-medium">Top issues</p>
+              <div className="grid gap-2">
                 {issueRows.slice(0, 3).map(([issue, status, evidence]) => (
-                  <div key={issue} className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2 lg:py-3">
-                    <AlertTriangle className={status === "Fail" ? "h-4 w-4 text-red-400" : "h-4 w-4 text-orange-300"} />
+                  <div key={issue} className="flex min-w-0 items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2">
+                    <AlertTriangle className={status === "Fail" ? "h-4 w-4 shrink-0 text-red-400" : "h-4 w-4 shrink-0 text-orange-300"} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm lg:text-base">{issue}</p>
+                      <p className="truncate text-sm">{issue}</p>
                       <p className="truncate text-xs text-muted-foreground">{evidence}</p>
                     </div>
-                    <span className="text-xs text-orange-200">High</span>
+                    <span className="shrink-0 text-xs text-orange-200">High</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
         </div>
-        <div className="mt-4 grid gap-2 border-t border-white/10 pt-4 sm:grid-cols-3 sm:gap-3 lg:mt-6 lg:gap-3 lg:pt-6">
+        <div className="mt-4 grid gap-2 border-t border-white/10 pt-4 sm:grid-cols-3 sm:gap-3">
           {["Crawl Complete", "Assets Found", "Report Ready"].map((label) => (
             <div key={label} className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-3 py-2 text-xs text-muted-foreground lg:py-2.5 lg:text-sm">
               <CheckCircle2 className="h-4 w-4 text-emerald-300" />
