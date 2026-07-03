@@ -42,6 +42,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AuditApiResponse, AuditCategory, AuditCheck, AuditReport, AuditResult, CheckStatus, ReportApiResponse } from "@/lib/audit/types";
+import { RadarPulse } from "@/components/landing-effects";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -328,8 +329,8 @@ export function AuditApp({
   return (
     <main className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_2%,rgba(255,106,0,0.2),transparent_28rem),radial-gradient(circle_at_86%_10%,rgba(255,176,32,0.14),transparent_24rem),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_18rem)]" />
-      <div className="pointer-events-none fixed right-8 top-6 hidden h-72 w-72 rounded-full border border-white/5 bg-[radial-gradient(circle,rgba(255,106,0,0.38)_0_3%,transparent_4%),repeating-radial-gradient(circle,rgba(255,255,255,0.12)_0_1px,transparent_1px_48px)] lg:block" />
-      <div className="relative mx-auto flex w-full max-w-[1500px] flex-col gap-3 px-3 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:min-h-screen lg:flex-row lg:p-5">
+      <RadarPulse className="fixed right-8 top-6 hidden h-72 w-72 lg:block" />
+      <div className="relative mx-auto flex w-full max-w-[1680px] flex-col gap-3 px-3 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:min-h-screen lg:flex-row lg:gap-6 lg:p-6 xl:gap-8 xl:p-8">
         <Sidebar
           user={user}
           isPaid={isPaid}
@@ -341,56 +342,56 @@ export function AuditApp({
           onAddCredits={() => setIsCreditsModalOpen(true)}
         />
 
-        <section className="flex min-w-0 flex-1 flex-col gap-5">
+        <section className="flex min-w-0 flex-1 flex-col gap-5 lg:gap-6 xl:gap-7">
           <Card className="rounded-2xl border-white/10 bg-[#111317]/85 shadow-2xl shadow-black/30 backdrop-blur sm:rounded-3xl">
-            <CardContent className="grid gap-5 p-4 sm:gap-6 sm:p-6 xl:grid-cols-[0.9fr_1.1fr] xl:p-7">
-              <div className="space-y-5 sm:space-y-6">
+            <CardContent className="grid gap-5 p-4 sm:gap-6 sm:p-6 lg:p-8 xl:grid-cols-[0.9fr_1.1fr] xl:gap-10 xl:p-10 2xl:p-12">
+              <div className="space-y-5 sm:space-y-6 lg:space-y-7">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
+                  <Badge className="w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10 lg:px-3 lg:py-1 lg:text-sm">
                     {user ? "Ready to scan" : "Sign up to try DocScanner"}
                   </Badge>
-                  <Badge variant="outline" className="hidden border-white/10 bg-white/[0.03] text-muted-foreground sm:inline-flex">
+                  <Badge variant="outline" className="hidden border-white/10 bg-white/[0.03] text-muted-foreground sm:inline-flex lg:px-3 lg:py-1 lg:text-sm">
                     Scan. Score. Improve.
                   </Badge>
                 </div>
-                <div className="max-w-3xl space-y-3 sm:space-y-4">
-                  <h1 className="text-[2.55rem] font-semibold leading-[0.95] tracking-[-0.055em] text-balance sm:text-5xl lg:text-6xl">
+                <div className="max-w-3xl space-y-3 sm:space-y-4 lg:space-y-5">
+                  <h1 className="text-[2.55rem] font-semibold leading-[0.95] tracking-[-0.055em] text-balance sm:text-5xl lg:text-6xl xl:text-7xl">
                     The Lighthouse for <span className="text-orange-400">Developer Docs.</span>
                   </h1>
-                  <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-lg sm:leading-7">
+                  <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-lg sm:leading-7 lg:text-xl lg:leading-8">
                     Find missing specs, stale examples, and agent blockers before users hit them.
                   </p>
                   {!user ? null : creditsRemaining < 1 ? (
-                    <p className="max-w-2xl text-sm text-orange-200">
+                    <p className="max-w-2xl text-sm text-orange-200 lg:text-base">
                       Signed in as {displayName}. You are out of fresh scan credits. Stored scans still load for free.
                     </p>
                   ) : (
-                    <p className="max-w-2xl text-sm text-orange-200">
+                    <p className="max-w-2xl text-sm text-orange-200 lg:text-base">
                       Signed in as {displayName}. You have {creditsRemaining} fresh scan {creditsRemaining === 1 ? "credit" : "credits"} ready.
                     </p>
                   )}
                 </div>
 
                 {user ? (
-                  <form onSubmit={runScan} className="rounded-2xl border border-white/10 bg-black/25 p-2 shadow-inner shadow-black/30">
-                    <div className="flex flex-col gap-2 sm:flex-row">
+                  <form onSubmit={runScan} className="rounded-2xl border border-white/10 bg-black/25 p-2 shadow-inner shadow-black/30 lg:p-2.5">
+                    <div className="flex flex-col gap-2 sm:flex-row lg:gap-3">
                       <div className="relative flex-1">
-                        <Globe2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Globe2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground lg:h-5 lg:w-5" />
                         <Input
                           value={url}
                           onChange={(event) => setUrl(event.target.value)}
                           placeholder="https://docs.example.com"
-                          className="h-11 border-white/10 bg-[#0b0c0e]/80 pl-9 font-mono text-sm sm:h-12"
+                          className="h-11 border-white/10 bg-[#0b0c0e]/80 pl-9 font-mono text-sm sm:h-12 lg:h-14 lg:pl-11 lg:text-base"
                         />
                       </div>
-                      <Button type="submit" size="lg" disabled={isAuditing} className="h-11 bg-orange-500 px-5 text-black hover:bg-orange-400 sm:h-12">
+                      <Button type="submit" size="lg" disabled={isAuditing} className="h-11 bg-orange-500 px-5 text-black hover:bg-orange-400 sm:h-12 lg:h-14 lg:px-7 lg:text-base">
                         {isAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Radar className="mr-2 h-4 w-4" />}
                         Run scan
                       </Button>
                     </div>
                   </form>
                 ) : (
-                  <Button onClick={signInWithGoogle} size="lg" className="h-12 w-full rounded-xl bg-orange-500 text-black hover:bg-orange-400 sm:w-fit sm:px-6">
+                  <Button onClick={signInWithGoogle} size="lg" className="h-12 w-full rounded-xl bg-orange-500 text-black hover:bg-orange-400 sm:w-fit sm:px-6 lg:h-14 lg:px-8 lg:text-base">
                     <LogIn className="mr-2 h-4 w-4" />
                     Sign up to try the app
                   </Button>
@@ -526,13 +527,13 @@ function Sidebar({
       )}
     </aside>
 
-    <aside className="hidden shrink-0 flex-col justify-between gap-6 rounded-3xl border border-white/10 bg-[#0f1115]/80 p-4 shadow-2xl shadow-black/30 backdrop-blur lg:sticky lg:top-5 lg:flex lg:min-h-[16.5rem] lg:w-64 lg:self-start">
+    <aside className="hidden shrink-0 flex-col justify-between gap-6 rounded-3xl border border-white/10 bg-[#0f1115]/80 p-4 shadow-2xl shadow-black/30 backdrop-blur lg:sticky lg:top-6 lg:flex lg:min-h-[16.5rem] lg:w-64 lg:self-start xl:w-72 xl:p-5">
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <DocScannerMark className="h-11 w-11" />
+          <DocScannerMark className="h-11 w-11 xl:h-12 xl:w-12" />
           <div>
-            <p className="text-xl font-semibold tracking-[-0.03em]">DocScanner</p>
-            <p className="text-xs text-orange-200">{user ? displayName : "Sign up to try it"}</p>
+            <p className="text-xl font-semibold tracking-[-0.03em] xl:text-2xl">DocScanner</p>
+            <p className="text-xs text-orange-200 xl:text-sm">{user ? displayName : "Sign up to try it"}</p>
           </div>
         </div>
 
@@ -675,24 +676,24 @@ function PricingSection({
   if (!paymentsEnabled) {
     return (
       <Card className="border-white/10 bg-[#111317]/85 shadow-xl shadow-black/20">
-        <CardHeader>
+        <CardHeader className="lg:pb-2">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
-              <Badge className="mb-3 w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10">
+              <Badge className="mb-3 w-fit border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/10 lg:px-3 lg:py-1 lg:text-sm">
                 Credits by request
               </Badge>
-              <CardTitle className="text-2xl tracking-[-0.03em]">Need more scan credits?</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-2xl tracking-[-0.03em] lg:text-3xl">Need more scan credits?</CardTitle>
+              <CardDescription className="lg:text-base">
                 Paid checkout is paused while I finish the credit options. Email me your account and use case, and I will add more free credits.
               </CardDescription>
             </div>
             {user ? (
-              <Button variant="outline" onClick={onOpenCredits} className="border-orange-500/30 text-orange-200">
+              <Button variant="outline" onClick={onOpenCredits} className="border-orange-500/30 text-orange-200 lg:h-11 lg:px-5 lg:text-base">
                 <User className="mr-2 h-4 w-4" />
                 {creditsRemaining} credits left
               </Button>
             ) : (
-              <Button onClick={onSignIn} className="bg-orange-500 text-black hover:bg-orange-400">
+              <Button onClick={onSignIn} className="bg-orange-500 text-black hover:bg-orange-400 lg:h-11 lg:px-5 lg:text-base">
                 <LogIn className="mr-2 h-4 w-4" />
                 Sign in to request
               </Button>
@@ -765,19 +766,19 @@ function PricingSection({
 
 function RequestCreditsPanel({ user }: { user: CurrentUser | null }) {
   return (
-    <div className="grid gap-4 rounded-2xl border border-orange-500/20 bg-orange-500/[0.06] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
-      <div className="flex gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-orange-500/25 bg-orange-500/10">
-          <Mail className="h-5 w-5 text-orange-300" />
+    <div className="grid gap-4 rounded-2xl border border-orange-500/20 bg-orange-500/[0.06] p-4 sm:grid-cols-[1fr_auto] sm:items-center lg:gap-6 lg:p-6">
+      <div className="flex gap-3 lg:gap-4">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl border border-orange-500/25 bg-orange-500/10 lg:h-12 lg:w-12">
+          <Mail className="h-5 w-5 text-orange-300 lg:h-6 lg:w-6" />
         </div>
-        <div className="space-y-1">
-          <p className="font-medium">Request more free credits</p>
-          <p className="text-sm text-muted-foreground">
+        <div className="space-y-1 lg:space-y-2">
+          <p className="font-medium lg:text-lg">Request more free credits</p>
+          <p className="text-sm text-muted-foreground lg:text-base">
             Include your account email and what you are scanning so I can add the right amount manually.
           </p>
         </div>
       </div>
-      <Button asChild className="w-full justify-center bg-orange-500 text-black hover:bg-orange-400 sm:w-auto">
+      <Button asChild className="w-full justify-center bg-orange-500 text-black hover:bg-orange-400 sm:w-auto lg:h-12 lg:px-6 lg:text-base">
         <a href={buildCreditRequestHref(user)}>
           Email juampi
           <ArrowRight className="h-4 w-4" />
@@ -958,33 +959,33 @@ function DocScannerMark({ className = "h-10 w-10" }: { className?: string }) {
 
 function ScanPanel({ audit, isAuditing, className }: { audit: AuditResult | null; isAuditing: boolean; className?: string }) {
   return (
-    <div className={cn("relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0c0e]/70 p-4 shadow-inner shadow-black/30 sm:rounded-3xl sm:p-5", className)}>
-      <div className="pointer-events-none absolute -right-14 -top-14 h-44 w-44 rounded-full border border-white/10 bg-[radial-gradient(circle,rgba(255,106,0,0.35)_0_4%,transparent_5%),repeating-radial-gradient(circle,rgba(255,255,255,0.1)_0_1px,transparent_1px_32px)]" />
-      <div className="relative mb-5 flex items-center justify-between">
+    <div className={cn("relative overflow-hidden rounded-2xl border border-white/10 bg-[#0b0c0e]/70 p-4 shadow-inner shadow-black/30 sm:rounded-3xl sm:p-5 lg:p-7", className)}>
+      <RadarPulse className="absolute -right-14 -top-14 h-44 w-44" />
+      <div className="relative mb-5 flex items-center justify-between lg:mb-6">
         <div>
-          <p className="text-sm font-medium">What you get</p>
-          <p className="text-xs text-muted-foreground">Audit output in one run</p>
+          <p className="text-sm font-medium lg:text-base">What you get</p>
+          <p className="text-xs text-muted-foreground lg:text-sm">Audit output in one run</p>
         </div>
-        <Activity className="h-4 w-4 text-orange-300" />
+        <Activity className="h-4 w-4 text-orange-300 lg:h-5 lg:w-5" />
       </div>
-      <div className="relative space-y-3">
+      <div className="relative space-y-3 lg:space-y-4">
         {scanOutputs.map((output, index) => (
           <div
             key={output.title}
-            className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-3 sm:rounded-2xl sm:py-3.5"
+            className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-3 sm:rounded-2xl sm:py-3.5 lg:gap-4 lg:px-4 lg:py-4"
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-orange-500/25 bg-orange-500/10 text-xs text-orange-300">
-              {isAuditing ? <span className="animate-pulse">{index + 1}</span> : <CheckCircle2 className="h-4 w-4" />}
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-orange-500/25 bg-orange-500/10 text-xs text-orange-300 lg:h-9 lg:w-9 lg:text-sm">
+              {isAuditing ? <span className="animate-pulse">{index + 1}</span> : <CheckCircle2 className="h-4 w-4 lg:h-4.5 lg:w-4.5" />}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium">{output.title}</p>
-              <p className="truncate text-xs text-muted-foreground">{output.detail}</p>
+              <p className="text-sm font-medium lg:text-base">{output.title}</p>
+              <p className="truncate text-xs text-muted-foreground lg:text-sm">{output.detail}</p>
             </div>
           </div>
         ))}
       </div>
       {audit ? (
-        <div className="relative mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
+        <div className="relative mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3 lg:mt-6 lg:gap-4">
           <MiniMetric label="Links" value={audit.stats.discoveredUrls} icon={Search} />
           <MiniMetric label="Scanned" value={audit.stats.scannedPages} icon={FileText} />
           <MiniMetric label="Assets" value={audit.assets.length} icon={Sparkles} />
@@ -996,10 +997,10 @@ function ScanPanel({ audit, isAuditing, className }: { audit: AuditResult | null
 
 function MiniMetric({ label, value, icon: Icon }: { label: string; value: number; icon?: typeof Activity }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-[#111317]/80 p-2.5 sm:rounded-2xl sm:p-3">
-      {Icon ? <Icon className="mb-2 h-3.5 w-3.5 text-orange-300" /> : null}
-      <p className="font-mono text-base sm:text-lg">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-white/10 bg-[#111317]/80 p-2.5 sm:rounded-2xl sm:p-3 lg:p-4">
+      {Icon ? <Icon className="mb-2 h-3.5 w-3.5 text-orange-300 lg:h-4 lg:w-4" /> : null}
+      <p className="font-mono text-base sm:text-lg lg:text-xl">{value}</p>
+      <p className="text-xs text-muted-foreground lg:text-sm">{label}</p>
     </div>
   );
 }
