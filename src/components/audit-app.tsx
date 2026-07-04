@@ -133,6 +133,7 @@ export function AuditApp({
   const [audit, setAudit] = useState<AuditResult | null>(null);
   const [report, setReport] = useState<AuditReport | null>(null);
   const [isCached, setIsCached] = useState(false);
+  const [cachedFromUrl, setCachedFromUrl] = useState<string | null>(null);
   const [isReportCached, setIsReportCached] = useState(false);
   const [isLockedPreview, setIsLockedPreview] = useState(false);
   const [isAuditing, setIsAuditing] = useState(false);
@@ -142,6 +143,7 @@ export function AuditApp({
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [accountCredits, setAccountCredits] = useState(credits);
   const [error, setError] = useState<string | null>(null);
+  const [isNotDevDocs, setIsNotDevDocs] = useState(false);
   const pendingScanStartedRef = useRef(false);
   const creditsRemaining = Math.max(0, accountCredits.granted - accountCredits.used);
 
@@ -151,6 +153,8 @@ export function AuditApp({
     setError(null);
     setReport(null);
     setIsReportCached(false);
+    setIsNotDevDocs(false);
+    setCachedFromUrl(null);
 
     if (!user) {
       setIsAuditing(true);
@@ -179,11 +183,17 @@ export function AuditApp({
         if (payload.code === "credits_required") {
           setIsCreditsModalOpen(true);
         }
+        if (payload.code === "not_developer_docs") {
+          setIsNotDevDocs(true);
+          setAudit(null);
+          return;
+        }
         throw new Error(payload.error ?? "Audit failed.");
       }
       setAudit(payload.audit);
       setAuditId(payload.auditId);
       setIsCached(payload.cached);
+      setCachedFromUrl(payload.cachedFromUrl ?? null);
       if (payload.credits) {
         setAccountCredits({
           used: payload.credits.used,
@@ -235,6 +245,8 @@ export function AuditApp({
     setError(null);
     setReport(null);
     setIsReportCached(false);
+    setIsNotDevDocs(false);
+    setCachedFromUrl(null);
     setIsAuditing(true);
 
     try {
@@ -253,6 +265,7 @@ export function AuditApp({
       setAudit(payload.audit);
       setAuditId(payload.auditId);
       setIsCached(payload.cached);
+      setCachedFromUrl(payload.cachedFromUrl ?? null);
       if (payload.credits) {
         setAccountCredits({
           used: payload.credits.used,
@@ -450,6 +463,24 @@ export function AuditApp({
             </Alert>
           ) : null}
 
+          {isNotDevDocs ? (
+            <Alert className="border-amber-500/30 bg-amber-500/10">
+              <AlertTriangle className="h-4 w-4 text-amber-400" />
+              <AlertTitle className="text-amber-200">Not a developer documentation site</AlertTitle>
+              <AlertDescription className="text-amber-100/80">
+                DocScanner is designed for API docs and developer platforms — we couldn&apos;t detect
+                enough technical documentation signals on{" "}
+                <span className="font-mono">{url}</span>. No credit was used.
+                <br />
+                <span className="mt-1 block text-sm">
+                  Try a docs-specific URL such as{" "}
+                  <span className="font-mono">docs.yoursite.com</span> or{" "}
+                  <span className="font-mono">yoursite.com/docs</span>.
+                </span>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           {isAuditing ? <LoadingScorecard /> : null}
           {user ? (
             <PricingSection
@@ -469,6 +500,7 @@ export function AuditApp({
               isReporting={isReporting}
               report={report}
               isCached={isCached}
+              cachedFromUrl={cachedFromUrl}
               isReportCached={isReportCached}
               isLockedPreview={isLockedPreview}
               user={user}
@@ -1184,6 +1216,7 @@ function Results({
   isReporting,
   report,
   isCached,
+  cachedFromUrl,
   isReportCached,
   isLockedPreview,
   user,
@@ -1197,6 +1230,7 @@ function Results({
   isReporting: boolean;
   report: AuditReport | null;
   isCached: boolean;
+  cachedFromUrl: string | null;
   isReportCached: boolean;
   isLockedPreview: boolean;
   user: CurrentUser | null;
@@ -1236,9 +1270,15 @@ function Results({
                 <CardDescription>{audit.normalizedUrl}</CardDescription>
               </div>
               {isCached ? (
-                <Badge variant="outline" className="border-emerald-500/30 text-emerald-300">
-                  Stored scan
-                </Badge>
+                cachedFromUrl && formatScanHost(cachedFromUrl) !== formatScanHost(audit.url) ? (
+                  <Badge variant="outline" className="border-emerald-500/30 text-emerald-300">
+                    Stored · {formatScanHost(cachedFromUrl)}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="border-emerald-500/30 text-emerald-300">
+                    Stored scan
+                  </Badge>
+                )
               ) : isLockedPreview ? (
                 <Badge variant="outline" className="border-orange-500/30 text-orange-200">
                   Locked preview
@@ -1994,7 +2034,9 @@ function buildLockedPreviewAudit(inputUrl: string): AuditResult {
     url: inputUrl,
     normalizedUrl,
     scannedAt: new Date().toISOString(),
+    rubricVersion: "locked-preview",
     overallScore: 58,
+    isDevDocs: true,
     summary: {
       strengths: ["A stored scan may exist", "Google sign-in unlocks real evidence"],
       risks: ["Anonymous previews are intentionally blurred"],

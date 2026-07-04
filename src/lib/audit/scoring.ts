@@ -15,6 +15,8 @@ type Evidence = {
   assets: DiscoveredAsset[];
 };
 
+export const AUDIT_RUBRIC_VERSION = "2026-07-04-scoring-v2";
+
 const CATEGORY_META: Record<
   AuditCategoryId,
   Pick<AuditCategory, "id" | "title" | "description">
@@ -62,6 +64,69 @@ const KEYWORDS = {
   trust: ["status", "security", "privacy", "terms", "soc 2", "subprocessor"],
 };
 
+const MIN_KEYWORD_OCCURRENCES = 2;
+
+/**
+ * Determines whether a scanned site looks like a developer documentation or API
+ * platform rather than a personal portfolio, marketing page, or unrelated website.
+ *
+ * Scoring (max 14 pts, threshold 5):
+ *   Code blocks        → up to 3 pts  (technical docs always have code)
+ *   API keywords       → up to 3 pts  (endpoint, curl, webhook, …)
+ *   Own docs asset     → 3 pts        (docs/quickstart/apiReference on same root)
+ *   Auth keywords      → up to 2 pts  (api key, bearer, …)
+ *   Docs URL pattern   → 2 pts        (docs.*, /docs, /api, developer.*)
+ *   SDK keyword depth  → 1 pt         (≥ 3 of node/python/typescript/…)
+ */
+export function detectDevDocs(
+  context: { pagesText: string; codeBlocks: number; assets: DiscoveredAsset[] },
+  inputUrl: string,
+): { isDevDocs: boolean; confidence: number } {
+  let score = 0;
+
+  if (context.codeBlocks >= 5) score += 3;
+  else if (context.codeBlocks >= 2) score += 2;
+  else if (context.codeBlocks >= 1) score += 1;
+
+  const apiHits = keywordHits(context.pagesText, KEYWORDS.api).length;
+  if (apiHits >= 4) score += 3;
+  else if (apiHits >= 2) score += 2;
+  else if (apiHits >= 1) score += 1;
+
+  // Only count docs assets that belong to the same root domain as the scanned URL
+  let urlHostname = "";
+  try {
+    urlHostname = new URL(normalizeUrl(inputUrl)).hostname;
+  } catch { /* ignore */ }
+
+  const hasSameDomainDocsAsset = context.assets.some((a) => {
+    if (!["docs", "apiReference", "quickstart"].includes(a.type)) return false;
+    try {
+      const assetHost = new URL(a.url).hostname;
+      // same hostname, or subdomain of it (docs.x.com → x.com), or parent of it
+      return (
+        assetHost === urlHostname ||
+        assetHost.endsWith(`.${urlHostname}`) ||
+        urlHostname.endsWith(`.${assetHost}`)
+      );
+    } catch {
+      return false;
+    }
+  });
+  if (hasSameDomainDocsAsset) score += 3;
+
+  const authHits = keywordHits(context.pagesText, KEYWORDS.auth).length;
+  if (authHits >= 2) score += 2;
+  else if (authHits >= 1) score += 1;
+
+  if (/docs\.|\/docs|developer\.|\/api(\/|$)|reference\./.test(inputUrl.toLowerCase())) score += 2;
+
+  const sdkHits = keywordHits(context.pagesText, KEYWORDS.sdk).length;
+  if (sdkHits >= 3) score += 1;
+
+  return { isDevDocs: score >= 5, confidence: score / 14 };
+}
+
 export function scoreAudit(evidence: Evidence): AuditResult {
   const pagesText = evidence.pages
     .map((page) => `${page.url}\n${page.title ?? ""}\n${page.markdown ?? ""}`)
@@ -93,7 +158,7 @@ export function scoreAudit(evidence: Evidence): AuditResult {
     buildCategory("developerOnboarding", [
       checkAsset(context, "quickstart", "Has quickstart or getting-started page", "A new developer has an obvious first path.", 16, "Create a 5-minute quickstart with one complete working request."),
       checkKeyword(context, KEYWORDS.auth, "Explains authentication/API keys", "Developers can set credentials correctly.", 12, "Show API key setup and environment variable examples."),
-      checkKeyword(context, ["curl"], "Includes cURL examples", "cURL is the fastest universal test path.", 10, "Add cURL to the first-request flow."),
+      checkKeyword(context, ["curl"], "Includes cURL examples", "cURL is the fastest universal test path.", 10, "Add cURL to the first-request flow.", { passCount: 2 }),
       checkKeyword(context, ["response", "success", "json"], "Shows response examples", "Developers can compare expected output.", 10, "Show realistic success and error responses."),
       checkAsset(context, "playground", "Links to playground or sandbox", "Developers can test before integrating.", 8, "Add a playground CTA beside quickstarts."),
     ]),
@@ -129,12 +194,15 @@ export function scoreAudit(evidence: Evidence): AuditResult {
   const overallScore = weightedScore(categories.flatMap((category) => category.checks));
   const failed = categories.flatMap((category) => category.checks).filter((check) => check.status === "fail");
   const passed = categories.flatMap((category) => category.checks).filter((check) => check.status === "pass");
+  const { isDevDocs } = detectDevDocs(context, evidence.url);
 
   return {
     url: evidence.url,
     normalizedUrl: normalizeUrl(evidence.url),
     scannedAt: new Date().toISOString(),
+    rubricVersion: AUDIT_RUBRIC_VERSION,
     overallScore,
+    isDevDocs,
     categories,
     pages: evidence.pages,
     assets: dedupeAssets(evidence.assets),
@@ -158,7 +226,13 @@ export function scoreAudit(evidence: Evidence): AuditResult {
 
 export function normalizeUrl(input: string) {
   const url = input.startsWith("http") ? input : `https://${input}`;
-  return new URL(url).origin;
+  const parsed = new URL(url);
+  parsed.hash = "";
+  parsed.search = "";
+  if (parsed.pathname !== "/") {
+    parsed.pathname = parsed.pathname.replace(/\/+$/, "");
+  }
+  return parsed.toString().replace(/\/$/, "");
 }
 
 function buildCategory(id: AuditCategoryId, checks: AuditCheck[]): AuditCategory {
@@ -205,18 +279,42 @@ function checkKeyword(
   description: string,
   weight: number,
   fix: string,
+  options?: { passCount?: number },
 ): AuditCheck {
-  const hits = keywords.filter((keyword) => context.pagesText.includes(keyword));
-  const status: CheckStatus = hits.length >= 2 ? "pass" : hits.length === 1 ? "warn" : "fail";
+  const hits = keywordHits(context.pagesText, keywords);
+  const passCount = options?.passCount ?? MIN_KEYWORD_OCCURRENCES;
+  const totalOccurrences = hits.reduce((sum, hit) => sum + hit.count, 0);
+  const status: CheckStatus =
+    totalOccurrences >= passCount ? "pass" : totalOccurrences > 0 ? "warn" : "fail";
   return {
     id: label.toLowerCase().replaceAll(/\W+/g, "-"),
     label,
     description,
     weight,
     status,
-    evidence: hits.length ? `Found: ${hits.join(", ")}` : undefined,
+    evidence: hits.length ? `Found: ${hits.map((hit) => `${hit.keyword} (${hit.count})`).join(", ")}` : undefined,
     fix,
   };
+}
+
+function keywordHits(text: string, keywords: string[]) {
+  return keywords
+    .map((keyword) => ({
+      keyword,
+      count: countKeywordOccurrences(text, keyword),
+    }))
+    .filter((hit) => hit.count > 0);
+}
+
+function countKeywordOccurrences(text: string, keyword: string) {
+  const normalizedKeyword = keyword.trim().replace(/\s+/g, " ");
+  const source = escapeRegex(normalizedKeyword).replace(/\\ /g, "\\s+");
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${source}(?![\\p{L}\\p{N}])`, "giu");
+  return text.match(pattern)?.length ?? 0;
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function checkCodeBlocks(

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "diagnose:audit": "tsx scripts/diagnose-audit.ts",
     "seed:audits": "tsx scripts/seed-audits.ts",
     "import:audit-cache": "tsx scripts/import-audit-cache.ts"
   },

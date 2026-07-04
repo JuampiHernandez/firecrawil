@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { runAudit } from "@/lib/audit/firecrawl";
-import { normalizeUrl } from "@/lib/audit/scoring";
+import { AUDIT_RUBRIC_VERSION, normalizeUrl } from "@/lib/audit/scoring";
 import type { AuditApiResponse, AuditResult } from "@/lib/audit/types";
 import { hostKey, rootDomain } from "@/lib/audit/url";
 import { createClient } from "@/lib/supabase/server";
@@ -49,8 +49,10 @@ export async function POST(request: Request) {
   }
 
   const credits = await getAccountCredits(supabase, user.id);
+  let staleAuditId: string | null = null;
 
-  // Cache lookup: exact host first, then any derivative on the same root domain.
+  // Cache lookup is intentionally exact. A marketing-site scan (stripe.com)
+  // should not be served for a docs-subdomain request (docs.stripe.com).
   if (!parsed.data.force) {
     const { data: exact } = await supabase
       .from("audits")
@@ -59,29 +61,17 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (exact) {
-      return NextResponse.json({
-        auditId: exact.id,
-        cached: true,
-        audit: exact.result as AuditResult,
-        credits: credits ?? undefined,
-      } satisfies AuditApiResponse);
-    }
+      const cachedAudit = exact.result as Partial<AuditResult>;
+      if (cachedAudit.rubricVersion === AUDIT_RUBRIC_VERSION) {
+        return NextResponse.json({
+          auditId: exact.id,
+          cached: true,
+          audit: exact.result as AuditResult,
+          credits: credits ?? undefined,
+        } satisfies AuditApiResponse);
+      }
 
-    const { data: derivative } = await supabase
-      .from("audits")
-      .select("id, result")
-      .eq("root_domain", domain)
-      .order("scanned_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (derivative) {
-      return NextResponse.json({
-        auditId: derivative.id,
-        cached: true,
-        audit: derivative.result as AuditResult,
-        credits: credits ?? undefined,
-      } satisfies AuditApiResponse);
+      staleAuditId = exact.id;
     }
   }
 
@@ -108,6 +98,17 @@ export async function POST(request: Request) {
   try {
     const audit = await runAudit(parsed.data.url);
 
+    if (!audit.isDevDocs) {
+      return NextResponse.json(
+        {
+          error:
+            "This doesn't look like a developer documentation site. DocScanner is designed for API docs and developer platforms. Try submitting a docs URL instead (e.g. docs.yoursite.com or yoursite.com/docs).",
+          code: "not_developer_docs",
+        },
+        { status: 422 },
+      );
+    }
+
     const { data: saved, error: saveError } = await supabase
       .from("audits")
       .upsert(
@@ -132,8 +133,8 @@ export async function POST(request: Request) {
 
     const updatedCredits = await getAccountCredits(supabase, user.id);
 
-    // A re-scan invalidates the previously generated report.
-    if (parsed.data.force) {
+    // A re-scan or rubric refresh invalidates the previously generated report.
+    if (parsed.data.force || staleAuditId) {
       await supabase.from("reports").delete().eq("audit_id", saved.id);
     }
 

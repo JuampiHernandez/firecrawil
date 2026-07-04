@@ -62,7 +62,9 @@ export type AuditResult = {
   url: string;
   normalizedUrl: string;
   scannedAt: string;
+  rubricVersion: string;
   overallScore: number;
+  isDevDocs: boolean;
   summary: {
     strengths: string[];
     risks: string[];
@@ -83,6 +85,7 @@ export type AuditResult = {
 export type AuditApiResponse = {
   auditId: string;
   cached: boolean;
+  cachedFromUrl?: string;
   audit: AuditResult;
   credits?: {
     used: number;
