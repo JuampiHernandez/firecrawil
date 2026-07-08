@@ -6,6 +6,8 @@ import type { AuditApiResponse, AuditResult } from "@/lib/audit/types";
 import { hostKey, rootDomain } from "@/lib/audit/url";
 import { createClient } from "@/lib/supabase/server";
 
+export const maxDuration = 120;
+
 const requestSchema = z.object({
   url: z.string().min(3),
   force: z.boolean().optional(),

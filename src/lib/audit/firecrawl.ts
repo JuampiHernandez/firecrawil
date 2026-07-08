@@ -26,6 +26,8 @@ type FirecrawlScrapeResponse = {
 };
 
 const FIRECRAWL_API = "https://api.firecrawl.dev/v2";
+const DEFAULT_TIMEOUT_MS = 45000;
+const MAP_TIMEOUT_MS = 90000;
 const MAX_LINKS = 80;
 const MAX_SCRAPED_PAGES = 14;
 const MAX_PAGE_LINKS = 80;
@@ -45,7 +47,7 @@ const SCAN_ROLES = [
 export async function runAudit(inputUrl: string) {
   const normalizedUrl = normalizeUrl(inputUrl);
   const supportingOrigins = getSupportingOrigins(normalizedUrl);
-  const primaryUrls = await mapSite(normalizedUrl);
+  const primaryUrls = await mapSite(normalizedUrl).catch(() => [normalizedUrl]);
   const discoveredUrls = unique([normalizedUrl, ...primaryUrls]);
   const [assets, supportingPages] = await Promise.all([
     discoverAssets(normalizedUrl, discoveredUrls, supportingOrigins),
@@ -65,12 +67,16 @@ export async function runAudit(inputUrl: string) {
 }
 
 async function mapSite(url: string, limit = MAX_LINKS) {
-  const response = await firecrawlFetch<FirecrawlMapResponse>("/map", {
-    url,
-    limit,
-    includeSubdomains: true,
-    sitemap: "include",
-  });
+  const response = await firecrawlFetch<FirecrawlMapResponse>(
+    "/map",
+    {
+      url,
+      limit,
+      includeSubdomains: true,
+      sitemap: "include",
+    },
+    MAP_TIMEOUT_MS,
+  );
 
   const rawLinks = response.links ?? response.data?.links ?? [];
   const links = rawLinks
@@ -383,7 +389,11 @@ function stripTrailingPunctuation(url: string) {
   return url.replace(/[),.;]+$/, "");
 }
 
-async function firecrawlFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
+async function firecrawlFetch<T>(
+  path: string,
+  body: Record<string, unknown>,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
@@ -393,7 +403,7 @@ async function firecrawlFetch<T>(path: string, body: Record<string, unknown>): P
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${FIRECRAWL_API}${path}`, {
@@ -409,6 +419,11 @@ async function firecrawlFetch<T>(path: string, body: Record<string, unknown>): P
     }
 
     return response.json() as Promise<T>;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Firecrawl ${path} timed out after ${timeoutMs / 1000}s.`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
